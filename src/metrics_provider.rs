@@ -1,5 +1,6 @@
 use chrono::{Timelike, Utc};
 use lazy_static::lazy_static;
+use log::error;
 use prometheus::{Gauge, IntGauge, Registry};
 use rand::distributions::Uniform;
 use rand::{thread_rng, Rng};
@@ -10,13 +11,13 @@ use warp::{Filter, Rejection, Reply};
 lazy_static! {
     pub static ref REGISTRY: Registry = Registry::new();
     pub static ref LATITUDE: Gauge =
-        Gauge::new("latitude", "latitude").expect("metric can be created");
+        Gauge::new("latitude", "latitude").expect("latitude can be created");
     pub static ref LONGITUDE: Gauge =
-        Gauge::new("longitude", "longitude").expect("metric can be created");
+        Gauge::new("longitude", "longitude").expect("longitude can be created");
     pub static ref WIND_SPEED: Gauge =
-        Gauge::new("wind_speed", "wind speed").expect("metric can be created");
+        Gauge::new("wind_speed", "wind speed").expect("wind_speed can be created");
     pub static ref WIND_DIRECTION: IntGauge =
-        IntGauge::new("wind_direction", "wind direction").expect("metric can be created");
+        IntGauge::new("wind_direction", "wind direction").expect("wind_direction can be created");
 }
 
 pub struct MetricsProvider {
@@ -28,16 +29,16 @@ impl MetricsProvider {
     pub fn new() -> Self {
         REGISTRY
             .register(Box::new(LATITUDE.clone()))
-            .expect("collector can be registered");
+            .expect("LATITUDE can be registered");
         REGISTRY
             .register(Box::new(LONGITUDE.clone()))
-            .expect("collector can be registered");
+            .expect("LONGITUDE can be registered");
         REGISTRY
             .register(Box::new(WIND_SPEED.clone()))
-            .expect("collector can be registered");
+            .expect("WIND_SPEED can be registered");
         REGISTRY
             .register(Box::new(WIND_DIRECTION.clone()))
-            .expect("collector can be registered");
+            .expect("WIND_DIRECTION can be registered");
 
         MetricsProvider {
             webserver_thread: None,
@@ -56,8 +57,13 @@ impl MetricsProvider {
     }
 
     pub async fn stop(&mut self) {
-        self.webserver_thread.as_ref().unwrap().abort();
-        self.data_generator_thread.as_ref().unwrap().abort();
+        if self.webserver_thread.is_some() {
+            self.webserver_thread.as_ref().unwrap().abort();
+        }
+
+        if self.data_generator_thread.is_some() {
+            self.data_generator_thread.as_ref().unwrap().abort();
+        }
     }
 
     async fn data_collector() {
@@ -82,14 +88,16 @@ impl MetricsProvider {
             let percent: f64 = thread_rng().gen_range(-5.0..5.0);
 
             // get current wind speed and apply deviation
-            let wind_speed = wind_speed_per_hour.get(Utc::now().hour() as usize).unwrap();
-            WIND_SPEED.set(wind_speed + (wind_speed * percent / 100.0));
+            match wind_speed_per_hour.get(Utc::now().hour() as usize) {
+                Some(v) => WIND_SPEED.set(v + (v * percent / 100.0)),
+                _ => error!("Couldn't generate wind speed"),
+            }
 
             // get current wind direction and apply deviation
-            let wind_direction = wind_direction_per_hour
-                .get(Utc::now().hour() as usize)
-                .unwrap();
-            WIND_DIRECTION.set(wind_direction + (*wind_direction as f64 * percent / 100.0) as i64);
+            match wind_direction_per_hour.get(Utc::now().hour() as usize) {
+                Some(v) => WIND_DIRECTION.set(v + (*v as f64 * percent / 100.0) as i64),
+                _ => error!("Couldn't generate wind direction"),
+            }
 
             collect_interval.tick().await;
         }
