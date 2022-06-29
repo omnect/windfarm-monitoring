@@ -23,6 +23,8 @@ warp = "0.3"
 prometheus = { version = "0.13", features = ["process"] }
 futures = { version = "0.3", default-features = false }
 tokio = "1.19"
+rand = "0.8"
+chrono = "0.4"
 
 [features]
 # don't select systemd as default feature
