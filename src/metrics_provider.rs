@@ -84,18 +84,18 @@ impl MetricsProvider {
         LONGITUDE.set(thread_rng().gen_range(-180.0..180.0));
 
         loop {
-            // create random deviation between -5.0 and 5.0 percent
-            let percent: f64 = thread_rng().gen_range(-5.0..5.0);
-
-            // get current wind speed and apply deviation
+            // get wind speed of current hour
+            // apply random deviation of -5.0 to 5.0 percent
             match wind_speed_per_hour.get(Utc::now().hour() as usize) {
-                Some(v) => WIND_SPEED.set(v + (v * percent / 100.0)),
+                Some(v) => WIND_SPEED.set(v + (v * thread_rng().gen_range(-5.0..5.0) / 100.0)),
                 _ => error!("Couldn't generate wind speed"),
             }
 
-            // get current wind direction and apply deviation
+            // get wind direction of current hour
+            // apply random deviation of -5.0 to 5.0 percent
             match wind_direction_per_hour.get(Utc::now().hour() as usize) {
-                Some(v) => WIND_DIRECTION.set(v + (*v as f64 * percent / 100.0) as i64),
+                Some(v) => WIND_DIRECTION
+                    .set(v + (*v as f64 * thread_rng().gen_range(-5.0..5.0) / 100.0) as i64),
                 _ => error!("Couldn't generate wind direction"),
             }
 
