@@ -4,20 +4,30 @@ use log::error;
 use prometheus::{Gauge, IntGauge, Registry};
 use rand::distributions::Uniform;
 use rand::{thread_rng, Rng};
+use std::env;
 use tokio::task::JoinHandle;
 use tokio::time::Duration;
 use warp::{Filter, Rejection, Reply};
 
+const DEFAULT_PORT: u16 = 8080;
+
 lazy_static! {
-    pub static ref REGISTRY: Registry = Registry::new();
-    pub static ref LATITUDE: Gauge =
+    static ref REGISTRY: Registry = Registry::new();
+    static ref LATITUDE: Gauge =
         Gauge::new("latitude", "latitude").expect("latitude can be created");
-    pub static ref LONGITUDE: Gauge =
+    static ref LONGITUDE: Gauge =
         Gauge::new("longitude", "longitude").expect("longitude can be created");
-    pub static ref WIND_SPEED: Gauge =
+    static ref WIND_SPEED: Gauge =
         Gauge::new("wind_speed", "wind speed").expect("wind_speed can be created");
-    pub static ref WIND_DIRECTION: IntGauge =
+    static ref WIND_DIRECTION: IntGauge =
         IntGauge::new("wind_direction", "wind direction").expect("wind_direction can be created");
+    static ref PORT: u16 = {
+        if let Some(port) = env::var_os("PORT") {
+            port.into_string().unwrap().parse::<u16>().unwrap()
+        } else {
+            DEFAULT_PORT
+        }
+    };
 }
 
 pub struct MetricsProvider {
@@ -49,7 +59,7 @@ impl MetricsProvider {
     pub fn run(&mut self) {
         self.webserver_thread = Some(tokio::spawn(async move {
             warp::serve(warp::path!("metrics").and_then(MetricsProvider::metrics_handler))
-                .run(([0, 0, 0, 0], 8080))
+                .run(([0, 0, 0, 0], *PORT))
                 .await;
         }));
 
