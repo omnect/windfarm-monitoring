@@ -5,11 +5,13 @@ use prometheus::{Gauge, IntGauge, Registry};
 use rand::distributions::Uniform;
 use rand::{thread_rng, Rng};
 use std::env;
+use std::net::Ipv4Addr;
 use tokio::task::JoinHandle;
 use tokio::time::Duration;
 use warp::{Filter, Rejection, Reply};
 
 const DEFAULT_PORT: u16 = 8080;
+const DEFAULT_BIND_ADDR: Ipv4Addr = Ipv4Addr::new(0, 0, 0, 0);
 
 lazy_static! {
     static ref REGISTRY: Registry = Registry::new();
@@ -26,6 +28,13 @@ lazy_static! {
             port.into_string().unwrap().parse::<u16>().unwrap()
         } else {
             DEFAULT_PORT
+        }
+    };
+    static ref BIND_ADDR: Ipv4Addr = {
+        if let Some(addr) = env::var_os("BIND_ADDR") {
+            addr.into_string().unwrap().parse::<Ipv4Addr>().unwrap()
+        } else {
+            DEFAULT_BIND_ADDR
         }
     };
 }
@@ -59,7 +68,7 @@ impl MetricsProvider {
     pub fn run(&mut self) {
         self.webserver_thread = Some(tokio::spawn(async move {
             warp::serve(warp::path!("metrics").and_then(MetricsProvider::metrics_handler))
-                .run(([0, 0, 0, 0], *PORT))
+                .run((BIND_ADDR.octets(), *PORT))
                 .await;
         }));
 
@@ -77,7 +86,9 @@ impl MetricsProvider {
     }
 
     async fn data_collector() {
+        // configure interval of wind speed and wind direction samples in seconds
         let mut collect_interval = tokio::time::interval(Duration::from_secs(10));
+
         let wind_speed_range: Uniform<f64> = Uniform::new_inclusive(0.0, 10.0);
         let wind_direction_range: Uniform<i64> = Uniform::new_inclusive(0, 359);
         let wind_speed_per_hour: Vec<f64> = thread_rng()

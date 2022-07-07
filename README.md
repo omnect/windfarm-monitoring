@@ -12,6 +12,7 @@ The monitoring module provides the following metrics on his endpoint:
 - wind_direction
 
 Default port endpoint is **8080**, but could be overwritten by an os environment variable **PORT**.
+Default ip address is **0.0.0.0**, but could be overwritten by an os environment variable **BIND_ADDR**.
 
 ## License
 Licensed under either of
