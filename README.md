@@ -11,7 +11,7 @@ The monitoring module provide the following metrics on his endpoint:
 - wind_speed
 - wind_direction
 
-Default port endpoint is **8080**, but could be overritten by an os environment vairable **PORT**.
+Default port endpoint is **8080**, but could be overritten by an os environment variable **PORT**.
 
 
 ## License
