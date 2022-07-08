@@ -1,0 +1,19 @@
+[Unit]
+Description=windfarm-monitoring service
+After=network-online.target aziot-identityd.service
+Wants=network-online.target aziot-identityd.service
+StartLimitBurst=10
+StartLimitIntervalSec=120
+
+[Service]
+Type=notify
+Restart=always
+RestartSec=5
+User=windfarm
+Group=windfarm
+WatchdogSec=30s
+
+ExecStart=/usr/bin/windfarm-monitoring
+
+[Install]
+WantedBy=multi-user.target
