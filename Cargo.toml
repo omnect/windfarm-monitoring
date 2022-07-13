@@ -1,6 +1,6 @@
 [package]
 name = "windfarm-monitoring"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["Joerg Zeidler <joerg.zeidler@conplement.de>", "Jan Zachmann <jan.zachmann@conplement.de>"]
 repository = "git@github.com:ICS-DeviceManagement/windfarm-monitoring.git"
@@ -16,7 +16,6 @@ serde_json = "1.0"
 env_logger = "0.8"
 log = "0.4"
 time = { version = "0.3", features = ["formatting"] }
-notify = "4.0"
 default-env = "0.1"
 lazy_static = "1.4"
 warp = "0.3"
