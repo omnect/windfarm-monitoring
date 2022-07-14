@@ -23,8 +23,8 @@ pub async fn run() -> Result<(), IotError> {
     let methods = direct_methods::get_direct_methods(Arc::clone(&tx_app2client));
     let mut result = Ok(());
 
-    client.run(None, methods, tx_client2app, rx_app2client);
-
+    //client.run(None, methods, tx_client2app, rx_app2client);
+    client.run(Some("HostName=iothub-ics-dev.azure-devices.net;DeviceId=jza-windfarm-device;ModuleId=iot-client-template-rs;SharedAccessKey=IGVj4MoNOy0mKFib6RaS2hlimOEJj5r+sYCfmgkvvX4="), methods, tx_client2app, rx_app2client);
     for msg in rx_client2app {
         match msg {
             Message::Authenticated => {
@@ -47,7 +47,7 @@ pub async fn run() -> Result<(), IotError> {
                 if let TwinUpdateState::Complete = state {
                     let mut location = twin["reported"]["location"].clone();
                     if serde_json::Value::Null == location {
-                        location = json!({ "location": {"latitude": thread_rng().gen_range(53.956915..53.908754) as f64, "longitude": thread_rng().gen_range(8.594901..8.741848) as f64} });
+                        location = json!({ "location": {"latitude": thread_rng().gen_range(53.908754f64..53.956915f64), "longitude": thread_rng().gen_range(8.594901f64..8.741848f64)} });
 
                         tx_app2client
                             .lock()
