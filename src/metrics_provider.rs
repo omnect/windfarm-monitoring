@@ -67,6 +67,7 @@ impl MetricsProvider {
     }
 
     pub fn run(&mut self, location: serde_json::Value) {
+        debug!("{}", location);
         self.webserver_thread = Some(tokio::spawn(async move {
             warp::serve(warp::path!("metrics").and_then(MetricsProvider::metrics_handler))
                 .run((BIND_ADDR.octets(), *PORT))
@@ -74,8 +75,8 @@ impl MetricsProvider {
         }));
 
         self.data_generator_thread = Some(tokio::spawn(MetricsProvider::data_collector(
-            location["location"]["latitude"].as_f64().unwrap(),
-            location["location"]["longitude"].as_f64().unwrap(),
+            location["latitude"].as_f64().unwrap(),
+            location["longitude"].as_f64().unwrap(),
         )));
     }
 

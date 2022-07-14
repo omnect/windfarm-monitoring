@@ -24,7 +24,7 @@ pub async fn run() -> Result<(), IotError> {
     let mut result = Ok(());
 
     client.run(None, methods, tx_client2app, rx_app2client);
-    
+    //client.run(Some("HostName=iothub-ics-dev.azure-devices.net;DeviceId=jza-windfarm-device;ModuleId=iot-client-template-rs;SharedAccessKey=IGVj4MoNOy0mKFib6RaS2hlimOEJj5r+sYCfmgkvvX4="), methods, tx_client2app, rx_app2client);
     for msg in rx_client2app {
         match msg {
             Message::Authenticated => {
