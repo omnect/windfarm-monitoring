@@ -58,6 +58,8 @@ pub async fn run() -> Result<(), IotError> {
                                 .unwrap()
                                 .send(Message::Reported(location.clone()))
                                 .unwrap();
+
+                            location = location["location"].clone();
                         }
 
                         metrics_provider.run(location);
