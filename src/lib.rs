@@ -9,7 +9,12 @@ use azure_iot_sdk::client::*;
 use client::{Client, Message};
 use log::{debug, error};
 use metrics_provider::MetricsProvider;
+use rand::{thread_rng, Rng};
+use serde_json::json;
+use std::sync::Once;
 use std::sync::{mpsc, Arc, Mutex};
+
+static MANAGE_LOCATION: Once = Once::new();
 
 #[tokio::main]
 pub async fn run() -> Result<(), IotError> {
@@ -22,7 +27,6 @@ pub async fn run() -> Result<(), IotError> {
     let mut result = Ok(());
 
     client.run(None, methods, tx_client2app, rx_app2client);
-    metrics_provider.run();
 
     for msg in rx_client2app {
         match msg {
@@ -42,8 +46,25 @@ pub async fn run() -> Result<(), IotError> {
 
                 break;
             }
-            Message::Desired(state, desired) => {
-                if let Err(e) = twin::update(state, desired, Arc::clone(&tx_app2client)) {
+            Message::Desired(state, twin) => {
+                if let TwinUpdateState::Complete = state {
+                    MANAGE_LOCATION.call_once(|| {
+                        let mut location = twin["reported"]["location"].clone();
+                        if serde_json::Value::Null == location {
+                            location = json!({ "location": {"latitude": thread_rng().gen_range(53.908754f64..53.956915f64), "longitude": thread_rng().gen_range(8.594901f64..8.741848f64)} });
+
+                            tx_app2client
+                                .lock()
+                                .unwrap()
+                                .send(Message::Reported(location.clone()))
+                                .unwrap();
+                        }
+
+                        metrics_provider.run(location);
+                    });
+                }
+
+                if let Err(e) = twin::update(state, twin, Arc::clone(&tx_app2client)) {
                     error!("Couldn't handle twin desired: {}", e);
                 }
             }

@@ -1,9 +1,10 @@
 use chrono::{Timelike, Utc};
 use lazy_static::lazy_static;
-use log::error;
+use log::{debug, error};
 use prometheus::{Gauge, IntGauge, Registry};
 use rand::distributions::Uniform;
 use rand::{thread_rng, Rng};
+use serde_json;
 use std::env;
 use std::net::Ipv4Addr;
 use tokio::task::JoinHandle;
@@ -65,14 +66,18 @@ impl MetricsProvider {
         }
     }
 
-    pub fn run(&mut self) {
+    pub fn run(&mut self, location: serde_json::Value) {
+        debug!("{}", location);
         self.webserver_thread = Some(tokio::spawn(async move {
             warp::serve(warp::path!("metrics").and_then(MetricsProvider::metrics_handler))
                 .run((BIND_ADDR.octets(), *PORT))
                 .await;
         }));
 
-        self.data_generator_thread = Some(tokio::spawn(MetricsProvider::data_collector()));
+        self.data_generator_thread = Some(tokio::spawn(MetricsProvider::data_collector(
+            location["latitude"].as_f64().unwrap(),
+            location["longitude"].as_f64().unwrap(),
+        )));
     }
 
     pub async fn stop(&mut self) {
@@ -85,7 +90,7 @@ impl MetricsProvider {
         }
     }
 
-    async fn data_collector() {
+    async fn data_collector(latitude: f64, longitude: f64) {
         // configure interval of wind speed and wind direction samples in seconds
         let mut collect_interval = tokio::time::interval(Duration::from_secs(10));
 
@@ -100,16 +105,17 @@ impl MetricsProvider {
             .take(24)
             .collect();
 
-        // gen location
-        LATITUDE.set(thread_rng().gen_range(-85.05112878..85.05112878));
-        LONGITUDE.set(thread_rng().gen_range(-180.0..180.0));
+        // set location
+        debug!("set LATITUDE: {} LONGITUDE: {}", latitude, longitude);
+        LATITUDE.set(latitude);
+        LONGITUDE.set(longitude);
 
         loop {
             // get wind speed of current hour
             // apply random deviation of -5.0 to 5.0 percent
             match wind_speed_per_hour.get(Utc::now().hour() as usize) {
                 Some(v) => WIND_SPEED.set(v + (v * thread_rng().gen_range(-5.0..5.0) / 100.0)),
-                _ => error!("Couldn't generate wind speed"),
+                _ => error!("couldn't generate wind speed"),
             }
 
             // get wind direction of current hour
@@ -117,7 +123,7 @@ impl MetricsProvider {
             match wind_direction_per_hour.get(Utc::now().hour() as usize) {
                 Some(v) => WIND_DIRECTION
                     .set(v + (*v as f64 * thread_rng().gen_range(-5.0..5.0) / 100.0) as i64),
-                _ => error!("Couldn't generate wind direction"),
+                _ => error!("couldn't generate wind direction"),
             }
 
             collect_interval.tick().await;
@@ -130,12 +136,12 @@ impl MetricsProvider {
 
         let mut buffer = Vec::new();
         if let Err(e) = encoder.encode(&REGISTRY.gather(), &mut buffer) {
-            eprintln!("could not encode custom metrics: {}", e);
+            error!("could not encode custom metrics: {}", e);
         };
         let mut res = match String::from_utf8(buffer.clone()) {
             Ok(v) => v,
             Err(e) => {
-                eprintln!("custom metrics could not be from_utf8'd: {}", e);
+                error!("custom metrics could not be from_utf8'd: {}", e);
                 String::default()
             }
         };
@@ -144,12 +150,12 @@ impl MetricsProvider {
 
         let mut buffer = Vec::new();
         if let Err(e) = encoder.encode(&prometheus::gather(), &mut buffer) {
-            eprintln!("could not encode prometheus metrics: {}", e);
+            error!("could not encode prometheus metrics: {}", e);
         };
         let res_custom = match String::from_utf8(buffer.clone()) {
             Ok(v) => v,
             Err(e) => {
-                eprintln!("prometheus metrics could not be from_utf8'd: {}", e);
+                error!("prometheus metrics could not be from_utf8'd: {}", e);
                 String::default()
             }
         };
