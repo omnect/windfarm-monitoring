@@ -1,6 +1,6 @@
 [package]
 name = "windfarm-monitoring"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 authors = ["Joerg Zeidler <joerg.zeidler@conplement.de>", "Jan Zachmann <jan.zachmann@conplement.de>"]
 repository = "git@github.com:ICS-DeviceManagement/windfarm-monitoring.git"
