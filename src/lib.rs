@@ -24,7 +24,6 @@ pub async fn run() -> Result<(), IotError> {
     let (tx_app2client, rx_app2client) = mpsc::channel();
     let tx_app2client = Arc::new(Mutex::new(tx_app2client));
     let methods = direct_methods::get_direct_methods(Arc::clone(&tx_app2client));
-    let mut result = Ok(());
 
     client.run(None, methods, tx_client2app, rx_app2client);
 
@@ -39,12 +38,13 @@ pub async fn run() -> Result<(), IotError> {
                 }
             }
             Message::Unauthenticated(reason) => {
-                result = Err(IotError::from(format!(
-                    "No connection. Reason: {:?}",
-                    reason
-                )));
-
-                break;
+                if !matches!(reason, UnauthenticatedReason::ExpiredSasToken) {
+                    client.stop().await.unwrap();
+                    return Err(IotError::from(format!(
+                        "No connection. Reason: {:?}",
+                        reason
+                    )));
+                }
             }
             Message::Desired(state, twin) => {
                 if let TwinUpdateState::Complete = state {
@@ -78,7 +78,5 @@ pub async fn run() -> Result<(), IotError> {
     }
 
     metrics_provider.stop().await;
-    client.stop().await?;
-
-    result
+    client.stop().await
 }
