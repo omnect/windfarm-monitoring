@@ -14,6 +14,7 @@ use serde_json::json;
 use std::sync::Once;
 use std::sync::{mpsc, Arc, Mutex};
 
+static INIT: Once = Once::new();
 static MANAGE_LOCATION: Once = Once::new();
 
 #[tokio::main]
@@ -24,27 +25,29 @@ pub async fn run() -> Result<(), IotError> {
     let (tx_app2client, rx_app2client) = mpsc::channel();
     let tx_app2client = Arc::new(Mutex::new(tx_app2client));
     let methods = direct_methods::get_direct_methods(Arc::clone(&tx_app2client));
-    let mut result = Ok(());
 
     client.run(None, methods, tx_client2app, rx_app2client);
 
     for msg in rx_client2app {
         match msg {
             Message::Authenticated => {
-                #[cfg(feature = "systemd")]
-                systemd::notify_ready();
+                INIT.call_once(|| {
+                    #[cfg(feature = "systemd")]
+                    systemd::notify_ready();
 
-                if let Err(e) = twin::report_version(Arc::clone(&tx_app2client)) {
-                    error!("Couldn't report version: {}", e);
-                }
+                    if let Err(e) = twin::report_version(Arc::clone(&tx_app2client)) {
+                        error!("Couldn't report version: {}", e);
+                    }
+                });
             }
             Message::Unauthenticated(reason) => {
-                result = Err(IotError::from(format!(
-                    "No connection. Reason: {:?}",
-                    reason
-                )));
-
-                break;
+                if !matches!(reason, UnauthenticatedReason::ExpiredSasToken) {
+                    client.stop().await.unwrap();
+                    return Err(IotError::from(format!(
+                        "No connection. Reason: {:?}",
+                        reason
+                    )));
+                }
             }
             Message::Desired(state, twin) => {
                 if let TwinUpdateState::Complete = state {
@@ -78,7 +81,5 @@ pub async fn run() -> Result<(), IotError> {
     }
 
     metrics_provider.stop().await;
-    client.stop().await?;
-
-    result
+    client.stop().await
 }
