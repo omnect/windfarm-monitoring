@@ -42,7 +42,6 @@ pub async fn run() -> Result<(), IotError> {
             }
             Message::Unauthenticated(reason) => {
                 if !matches!(reason, UnauthenticatedReason::ExpiredSasToken) {
-                    client.stop().await.unwrap();
                     return Err(IotError::from(format!(
                         "No connection. Reason: {:?}",
                         reason
