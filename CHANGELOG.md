@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.6] Q3 2022
  - start service after time-sync target to avoid time jumps during service start
+ - added info message for logging the package version
 
 ## [0.1.5] Q3 2022
 - updated all depencies to solve audit errors
