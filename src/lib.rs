@@ -14,8 +14,8 @@ use serde_json::json;
 use std::sync::Once;
 use std::sync::{mpsc, Arc, Mutex};
 
-static INIT: Once = Once::new();
-static MANAGE_LOCATION: Once = Once::new();
+static AUTHENTICATED_ONCE: Once = Once::new();
+static TWIN_READY_ONCE: Once = Once::new();
 
 #[tokio::main]
 pub async fn run() -> Result<(), IotError> {
@@ -31,13 +31,9 @@ pub async fn run() -> Result<(), IotError> {
     for msg in rx_client2app {
         match msg {
             Message::Authenticated => {
-                INIT.call_once(|| {
+                AUTHENTICATED_ONCE.call_once(|| {
                     #[cfg(feature = "systemd")]
                     systemd::notify_ready();
-
-                    if let Err(e) = twin::report_versions(Arc::clone(&tx_app2client)) {
-                        error!("Couldn't report version: {}", e);
-                    }
                 });
             }
             Message::Unauthenticated(reason) => {
@@ -50,8 +46,13 @@ pub async fn run() -> Result<(), IotError> {
             }
             Message::Desired(state, twin) => {
                 if let TwinUpdateState::Complete = state {
-                    MANAGE_LOCATION.call_once(|| {
+                    TWIN_READY_ONCE.call_once(|| {
                         let mut location = twin["reported"]["location"].clone();
+
+                        if let Err(e) = twin::report_versions(Arc::clone(&tx_app2client)) {
+                            error!("Couldn't report version: {}", e);
+                        }
+
                         if serde_json::Value::Null == location {
                             location = json!({ "location": {"latitude": thread_rng().gen_range(53.908754f64..53.956915f64), "longitude": thread_rng().gen_range(8.594901f64..8.741848f64)} });
 
