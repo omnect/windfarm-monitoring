@@ -18,7 +18,7 @@ pub fn report_versions(tx_app2client: Arc<Mutex<Sender<Message>>>) -> Result<(),
         .unwrap()
         .send(Message::Reported(json!({
             "module-version": env!("CARGO_PKG_VERSION"),
-            "azure sdk version": IotHubClient::get_sdk_version_string()
+            "azure-sdk-version": IotHubClient::get_sdk_version_string()
         })))?;
 
     Ok(())
