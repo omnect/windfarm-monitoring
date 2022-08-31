@@ -34,6 +34,10 @@ pub async fn run() -> Result<(), IotError> {
                 AUTHENTICATED_ONCE.call_once(|| {
                     #[cfg(feature = "systemd")]
                     systemd::notify_ready();
+
+                    if let Err(e) = twin::report_versions(Arc::clone(&tx_app2client)) {
+                        error!("Couldn't report version: {}", e);
+                    }
                 });
             }
             Message::Unauthenticated(reason) => {
@@ -48,11 +52,6 @@ pub async fn run() -> Result<(), IotError> {
                 if let TwinUpdateState::Complete = state {
                     TWIN_READY_ONCE.call_once(|| {
                         let mut location = twin["reported"]["location"].clone();
-
-                        if let Err(e) = twin::report_versions(Arc::clone(&tx_app2client)) {
-                            error!("Couldn't report version: {}", e);
-                        }
-
                         if serde_json::Value::Null == location {
                             location = json!({ "location": {"latitude": thread_rng().gen_range(53.908754f64..53.956915f64), "longitude": thread_rng().gen_range(8.594901f64..8.741848f64)} });
 
