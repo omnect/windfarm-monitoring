@@ -1,5 +1,5 @@
 use azure_iot_sdk::client::*;
-use log::debug;
+use log::info;
 use std::sync::{mpsc::Receiver, mpsc::Sender, Arc, Mutex};
 use std::time;
 use tokio::task::JoinHandle;
@@ -108,7 +108,7 @@ impl Client {
                         client.send_d2c_message(telemetry).map(|_| ())?
                     }
                     Ok(Message::Terminate) => return Ok(()),
-                    Ok(_) => debug!("Client received unhandled message"),
+                    Ok(_) => info!("Client received unhandled message"),
                     Err(_) => (),
                 };
 
