@@ -1,6 +1,6 @@
 use chrono::{Timelike, Utc};
 use lazy_static::lazy_static;
-use log::{debug, error};
+use log::{error, info};
 use prometheus::{Gauge, IntGauge, Registry};
 use rand::distributions::Uniform;
 use rand::{thread_rng, Rng};
@@ -67,7 +67,6 @@ impl MetricsProvider {
     }
 
     pub fn run(&mut self, location: serde_json::Value) {
-        debug!("{}", location);
         self.webserver_thread = Some(tokio::spawn(async move {
             warp::serve(warp::path!("metrics").and_then(MetricsProvider::metrics_handler))
                 .run((BIND_ADDR.octets(), *PORT))
@@ -94,6 +93,7 @@ impl MetricsProvider {
         // configure interval of wind speed and wind direction samples in seconds
         let mut collect_interval = tokio::time::interval(Duration::from_secs(10));
 
+        // init simulation ranges
         let wind_speed_range: Uniform<f64> = Uniform::new_inclusive(0.0, 10.0);
         let wind_direction_range: Uniform<i64> = Uniform::new_inclusive(0, 359);
         let wind_speed_per_hour: Vec<f64> = thread_rng()
@@ -106,7 +106,7 @@ impl MetricsProvider {
             .collect();
 
         // set location
-        debug!("set LATITUDE: {} LONGITUDE: {}", latitude, longitude);
+        info!("set LATITUDE: {} LONGITUDE: {}", latitude, longitude);
         LATITUDE.set(latitude);
         LONGITUDE.set(longitude);
 
@@ -132,12 +132,14 @@ impl MetricsProvider {
 
     async fn metrics_handler() -> Result<impl Reply, Rejection> {
         use prometheus::Encoder;
-        let encoder = prometheus::TextEncoder::new();
 
+        let encoder = prometheus::TextEncoder::new();
         let mut buffer = Vec::new();
+
         if let Err(e) = encoder.encode(&REGISTRY.gather(), &mut buffer) {
             error!("could not encode custom metrics: {}", e);
         };
+
         let mut res = match String::from_utf8(buffer.clone()) {
             Ok(v) => v,
             Err(e) => {
@@ -149,9 +151,11 @@ impl MetricsProvider {
         buffer.clear();
 
         let mut buffer = Vec::new();
+
         if let Err(e) = encoder.encode(&prometheus::gather(), &mut buffer) {
             error!("could not encode prometheus metrics: {}", e);
         };
+
         let res_custom = match String::from_utf8(buffer.clone()) {
             Ok(v) => v,
             Err(e) => {
@@ -159,9 +163,11 @@ impl MetricsProvider {
                 String::default()
             }
         };
+
         buffer.clear();
 
         res.push_str(&res_custom);
+
         Ok(res)
     }
 }

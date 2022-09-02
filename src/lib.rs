@@ -7,7 +7,7 @@ pub mod systemd;
 pub mod twin;
 use azure_iot_sdk::client::*;
 use client::{Client, Message};
-use log::{debug, error};
+use log::{info, error};
 use metrics_provider::MetricsProvider;
 use rand::{thread_rng, Rng};
 use serde_json::json;
@@ -75,7 +75,7 @@ pub async fn run() -> Result<(), IotError> {
             Message::C2D(msg) => {
                 message::update(msg, Arc::clone(&tx_app2client));
             }
-            _ => debug!("Application received unhandled message"),
+            _ => info!("Application received unhandled message"),
         }
     }
 

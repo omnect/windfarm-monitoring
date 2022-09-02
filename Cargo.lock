@@ -1423,8 +1423,9 @@ checksum = "d29ab0c6d3fc0ee92fe66e2d99f700eab17a8d57d1c1d3b748380fb20baa78cd"
 
 [[package]]
 name = "sd-notify"
-version = "0.5.0"
-source = "git+ssh://git@github.com/ICS-DeviceManagement/sd-notify.git?tag=v0.5.0#c36f0bf43e154452fb97ab7da42db14fcd2571a3"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "621e3680f3e07db4c9c2c3fb07c6223ab2fab2e54bd3c04c3ae037990f428c32"
 
 [[package]]
 name = "serde"
@@ -2081,7 +2082,7 @@ checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
 
 [[package]]
 name = "windfarm-monitoring"
-version = "0.1.9"
+version = "0.1.10"
 dependencies = [
  "azure-iot-sdk",
  "chrono",
