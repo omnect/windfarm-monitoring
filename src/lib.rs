@@ -79,6 +79,6 @@ pub async fn run() -> Result<(), IotError> {
         }
     }
 
-    metrics_provider.stop().await;
-    client.stop().await
+    metrics_provider.stop();
+    client.stop()
 }

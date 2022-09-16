@@ -1,6 +1,6 @@
 [package]
 name = "windfarm-monitoring"
-version = "0.1.11"
+version = "0.1.12"
 edition = "2021"
 authors = ["Joerg Zeidler <joerg.zeidler@conplement.de>", "Jan Zachmann <jan.zachmann@conplement.de>"]
 repository = "git@github.com:ICS-DeviceManagement/windfarm-monitoring.git"
@@ -25,6 +25,7 @@ tokio = { version = "1.19.2", features = ["full"] }
 rand = "0.8"
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
 log-panics = { version = "2", features = ["with-backtrace"] }
+futures-executor = "0.3"
 
 [features]
 # select if systemd ready and watchdog should be enabled
