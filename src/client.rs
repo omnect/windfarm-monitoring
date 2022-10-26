@@ -1,5 +1,6 @@
 use azure_iot_sdk::client::*;
-use log::info;
+use futures_executor::block_on;
+use log::{error, info, warn};
 use std::sync::{mpsc::Receiver, mpsc::Sender, Arc, Mutex};
 use std::time;
 use tokio::task::JoinHandle;
@@ -25,11 +26,20 @@ struct ClientEventHandler {
 
 impl EventHandler for ClientEventHandler {
     fn handle_connection_status(&self, auth_status: AuthenticationStatus) {
-        match auth_status {
-            AuthenticationStatus::Authenticated => self.tx.send(Message::Authenticated).unwrap(),
+        info!("new AuthenticationStatus: {:?}", auth_status);
+
+        let res = match auth_status {
+            AuthenticationStatus::Authenticated => self.tx.send(Message::Authenticated),
             AuthenticationStatus::Unauthenticated(reason) => {
-                self.tx.send(Message::Unauthenticated(reason)).unwrap()
+                self.tx.send(Message::Unauthenticated(reason))
             }
+        };
+
+        if let Err(e) = res {
+            warn!(
+                "Couldn't send AuthenticationStatus since the receiver was closed: {}",
+                e.to_string()
+            )
         }
     }
 
@@ -122,9 +132,22 @@ impl Client {
         }));
     }
 
-    pub async fn stop(self) -> Result<(), IotError> {
-        *self.run.lock().unwrap() = false;
+    pub fn stop(&mut self) -> Result<(), IotError> {
+        if self.thread.is_some() {
+            return block_on(async {
+                *self.run.lock().unwrap() = false;
+                self.thread.take().as_mut().unwrap().await?
+            });
+        }
 
-        self.thread.unwrap().await?
+        Ok(())
+    }
+}
+
+impl Drop for Client {
+    fn drop(&mut self) {
+        if let Err(e) = self.stop() {
+            error!("Client thread returned with: {}", e);
+        }
     }
 }

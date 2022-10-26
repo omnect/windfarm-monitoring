@@ -1,4 +1,5 @@
 use chrono::{Timelike, Utc};
+use futures_executor::block_on;
 use lazy_static::lazy_static;
 use log::{error, info};
 use prometheus::{Gauge, IntGauge, Registry};
@@ -41,8 +42,7 @@ lazy_static! {
 }
 
 pub struct MetricsProvider {
-    webserver_thread: Option<JoinHandle<()>>,
-    data_generator_thread: Option<JoinHandle<()>>,
+    threads: Vec<Option<JoinHandle<()>>>,
 }
 
 impl MetricsProvider {
@@ -60,32 +60,36 @@ impl MetricsProvider {
             .register(Box::new(WIND_DIRECTION.clone()))
             .expect("WIND_DIRECTION can be registered");
 
-        MetricsProvider {
-            webserver_thread: None,
-            data_generator_thread: None,
-        }
+        MetricsProvider { threads: vec![] }
     }
 
     pub fn run(&mut self, location: serde_json::Value) {
-        self.webserver_thread = Some(tokio::spawn(async move {
+        self.threads.push(Some(tokio::spawn(async move {
             warp::serve(warp::path!("metrics").and_then(MetricsProvider::metrics_handler))
                 .run((BIND_ADDR.octets(), *PORT))
                 .await;
-        }));
+        })));
 
-        self.data_generator_thread = Some(tokio::spawn(MetricsProvider::data_collector(
-            location["latitude"].as_f64().unwrap(),
-            location["longitude"].as_f64().unwrap(),
-        )));
+        self.threads
+            .push(Some(tokio::spawn(MetricsProvider::data_collector(
+                location["latitude"].as_f64().unwrap(),
+                location["longitude"].as_f64().unwrap(),
+            ))));
     }
 
-    pub async fn stop(&mut self) {
-        if self.webserver_thread.is_some() {
-            self.webserver_thread.as_ref().unwrap().abort();
-        }
-
-        if self.data_generator_thread.is_some() {
-            self.data_generator_thread.as_ref().unwrap().abort();
+    pub fn stop(&mut self) {
+        for thread in self.threads.iter_mut() {
+            if thread.is_some() {
+                let thread = thread.as_mut().unwrap();
+                thread.abort();
+                block_on(async {
+                    thread.await.unwrap_or_else(|e| {
+                        if !e.is_cancelled() {
+                            error!("thread terminated with error: {}", e.to_string());
+                        }
+                    });
+                });
+            }
         }
     }
 
@@ -169,5 +173,11 @@ impl MetricsProvider {
         res.push_str(&res_custom);
 
         Ok(res)
+    }
+}
+
+impl Drop for MetricsProvider {
+    fn drop(&mut self) {
+        self.stop();
     }
 }
