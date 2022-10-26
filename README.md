@@ -1,7 +1,7 @@
 # windfarm-monitoring
 
 ## Instruction
-This module is based on the ICS_DeviceManagement [iot-client-template-rs](https://github.com/ICS-DeviceManagement/iot-client-template-rs). All information you need to build the project can be found there.
+This module is based on the omnect Device Management [iot-client-template-rs](https://github.com/omnect/iot-client-template-rs). All information you need to build the project can be found there.
 
 ## What is windfarm-monitoring
 This module is designed to **demonstrate windfarm signal values** using Prometheus Metrics in a Rust Web Service:
