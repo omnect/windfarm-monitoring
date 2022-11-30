@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.14] Q4 2022
  - updated dependencies in order to fix https://github.com/tikv/rust-prometheus/issues/442
+ - bumped to azure-iot-sdk 0.8.8
 
 ## [0.1.13] Q4 2022
  - renamed from ICS-DeviceManagement to omnect github orga
