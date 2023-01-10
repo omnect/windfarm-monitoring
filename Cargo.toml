@@ -1,6 +1,6 @@
 [package]
 name = "windfarm-monitoring"
-version = "0.1.14"
+version = "0.1.15"
 edition = "2021"
 authors = ["Joerg Zeidler <joerg.zeidler@conplement.de>", "Jan Zachmann <jan.zachmann@conplement.de>"]
 repository = "git@github.com:omnect/windfarm-monitoring.git"
@@ -10,22 +10,22 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 azure-iot-sdk = { git = "ssh://git@github.com/omnect/azure-iot-sdk.git", tag = "0.8.8", default-features = false }
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
+default-env = "0.1"
+env_logger = "0.8"
+futures = { version = "0.3", default-features = false }
+futures-executor = "0.3"
+lazy_static = "1.4"
+log = "0.4"
+log-panics = { version = "2", features = ["with-backtrace"] }
+prometheus = { version = "0.13", features = ["process"] }
+rand = "0.8"
 sd-notify = { version = "0.4.1", optional = true }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-env_logger = "0.8"
-log = "0.4"
 time = { version = "0.3", features = ["formatting"] }
-default-env = "0.1"
-lazy_static = "1.4"
+tokio = { version = "1.23", features = ["full"] }
 warp = "0.3"
-prometheus = { version = "0.13", features = ["process"] }
-futures = { version = "0.3", default-features = false }
-tokio = { version = "1.19.2", features = ["full"] }
-rand = "0.8"
-chrono = { version = "0.4", default-features = false, features = ["clock"] }
-log-panics = { version = "2", features = ["with-backtrace"] }
-futures-executor = "0.3"
 
 [features]
 # select if systemd ready and watchdog should be enabled
