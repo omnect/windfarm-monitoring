@@ -1,3 +1,4 @@
+use anyhow::Result;
 use chrono::{Timelike, Utc};
 use futures_executor::block_on;
 use lazy_static::lazy_static;
@@ -5,7 +6,6 @@ use log::{error, info};
 use prometheus::{Gauge, IntGauge, Registry};
 use rand::distributions::Uniform;
 use rand::{thread_rng, Rng};
-use serde_json;
 use std::env;
 use std::net::Ipv4Addr;
 use tokio::task::JoinHandle;
