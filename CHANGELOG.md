@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.2.0] Q4 2022
- - replace warp by actix_web
+ - replaced warp by actix_web
 
 ## [0.1.17] Q4 2022
  - fixed GHSA-4q83-7cq4-p6wg (explicit `cargo update`)
