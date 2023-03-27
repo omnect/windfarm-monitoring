@@ -21,7 +21,8 @@ pub async fn run() -> Result<()> {
     let (tx_app2client, rx_app2client) = mpsc::channel();
     let twin = twin::get_or_init(Some(&tx_app2client));
 
-    client.run(None, None, tx_client2app, rx_app2client);
+    //client.run(None, None, tx_client2app, rx_app2client);
+    client.run(Some("HostName=omnect-cp-dev-iot-hub.azure-devices.net;DeviceId=jza-ssh-test;ModuleId=omnect-device-service;SharedAccessKey=VlOFwDSZm7I6aL0dRx0KrlnsoDv4QBdPmLazOu5Hhgw="), None, tx_client2app, rx_app2client);
 
     for msg in rx_client2app {
         match msg {

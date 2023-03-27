@@ -58,15 +58,11 @@ impl MetricsProvider {
 
     pub fn run(&mut self, location: serde_json::Value) {
         self.threads.push(Some(tokio::spawn(async move {
-            /* warp::serve(warp::path!("metrics").and_then(MetricsProvider::metrics_handler))
-            .run((BIND_ADDR.octets(), *PORT))
-            .await; */
-            let addr = SocketAddr::from(([127, 0, 0, 1], 443));
             block_on(async move {
                 let _ = HttpServer::new(|| {
                     App::new().route("/metrics", web::get().to(Self::metrics_handler))
                 })
-                .bind(addr)
+                .bind(*ADDR)
                 .unwrap()
                 .run()
                 .await;
