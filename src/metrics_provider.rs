@@ -23,14 +23,27 @@ lazy_static! {
         IntGauge::new("wind_direction", "wind direction").expect("wind_direction can be created");
     static ref ADDR: SocketAddr = {
         let def = SocketAddr::from(([0, 0, 0, 0], 8080));
-        let addr = env::var_os("BIND_ADDR_AND_PORT").unwrap_or(def.to_string().into());
+        let addr = env::var_os("BIND_ADDR_AND_PORT").unwrap_or({
+            let addr = def.to_string();
+            info!("use default address: {}", addr);
+            addr.into()
+        });
 
         addr.into_string()
-            .unwrap_or(def.to_string())
+            .unwrap_or({
+                error!("cannot convert address string, use default address");
+                def.to_string()
+            })
             .to_socket_addrs()
-            .unwrap_or(vec![def].into_iter())
+            .unwrap_or({
+                error!("cannot convert to socket address, use default address");
+                vec![def].into_iter()
+            })
             .next()
-            .unwrap_or(def)
+            .unwrap_or({
+                error!("iterator empty, use default address");
+                def
+            })
     };
 }
 
