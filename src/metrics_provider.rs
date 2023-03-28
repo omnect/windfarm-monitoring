@@ -1,4 +1,4 @@
-use actix_web::{web, App, HttpServer, Responder};
+use actix_web::{dev::ServerHandle, web, App, HttpServer, Responder};
 use chrono::{Timelike, Utc};
 use futures_executor::block_on;
 use lazy_static::lazy_static;
@@ -8,6 +8,7 @@ use rand::distributions::Uniform;
 use rand::{thread_rng, Rng};
 use std::env;
 use std::net::{SocketAddr, ToSocketAddrs};
+use std::sync::mpsc;
 use tokio::task::JoinHandle;
 use tokio::time::Duration;
 
@@ -23,32 +24,35 @@ lazy_static! {
         IntGauge::new("wind_direction", "wind direction").expect("wind_direction can be created");
     static ref ADDR: SocketAddr = {
         let def = SocketAddr::from(([0, 0, 0, 0], 8080));
-        let addr = env::var_os("BIND_ADDR_AND_PORT").unwrap_or({
-            let addr = def.to_string();
-            info!("use default address: {}", addr);
-            addr.into()
-        });
 
-        addr.into_string()
-            .unwrap_or({
-                error!("cannot convert address string, use default address");
-                def.to_string()
-            })
-            .to_socket_addrs()
-            .unwrap_or({
-                error!("cannot convert to socket address, use default address");
-                vec![def].into_iter()
-            })
-            .next()
-            .unwrap_or({
-                error!("iterator empty, use default address");
-                def
-            })
+        let Some(addr) = env::var_os("BIND_ADDR_AND_PORT") else {
+            info!("use default address: {}", def.to_string());
+            return def;
+        };
+
+        let Ok(addr) = addr.into_string() else {
+            error!("cannot convert address string, use default address: {}", def.to_string());
+            return def;
+        };
+
+        let Ok(mut addr) = addr.to_socket_addrs() else {
+            error!("cannot convert to socket address, use default address: {}", def.to_string());
+            return def;
+        };
+
+        let Some(addr) = addr.next() else {
+            error!("iterator empty, use default address: {}", def.to_string());
+            return def;
+        };
+
+        addr
     };
 }
 
+#[derive(Default)]
 pub struct MetricsProvider {
-    threads: Vec<Option<JoinHandle<()>>>,
+    srv: Option<ServerHandle>,
+    sim: Option<JoinHandle<()>>,
 }
 
 impl MetricsProvider {
@@ -66,42 +70,49 @@ impl MetricsProvider {
             .register(Box::new(WIND_DIRECTION.clone()))
             .expect("WIND_DIRECTION can be registered");
 
-        MetricsProvider { threads: vec![] }
+        MetricsProvider::default()
     }
 
     pub fn run(&mut self, location: serde_json::Value) {
-        self.threads.push(Some(tokio::spawn(async move {
+        let (tx, rx) = mpsc::channel();
+        tokio::spawn(async move {
             block_on(async move {
-                let _ = HttpServer::new(|| {
+                let server = HttpServer::new(|| {
                     App::new().route("/metrics", web::get().to(Self::metrics_handler))
                 })
+                .workers(1)
                 .bind(*ADDR)
                 .unwrap()
-                .run()
-                .await;
-            })
-        })));
+                .run();
 
-        self.threads
-            .push(Some(tokio::spawn(MetricsProvider::data_collector(
-                location["latitude"].as_f64().unwrap(),
-                location["longitude"].as_f64().unwrap(),
-            ))));
+                let _ = tx.send(server.handle());
+
+                server.await
+            })
+        });
+
+        self.srv = Some(rx.recv().unwrap());
+
+        self.sim = Some(tokio::spawn(MetricsProvider::data_collector(
+            location["latitude"].as_f64().unwrap(),
+            location["longitude"].as_f64().unwrap(),
+        )));
     }
 
     pub fn stop(&mut self) {
-        for thread in self.threads.iter_mut() {
-            if thread.is_some() {
-                let thread = thread.as_mut().unwrap();
-                thread.abort();
-                block_on(async {
-                    thread.await.unwrap_or_else(|e| {
-                        if !e.is_cancelled() {
-                            error!("thread terminated with error: {}", e.to_string());
-                        }
-                    });
+        if let Some(srv) = &self.srv {
+            block_on(srv.stop(true));
+        }
+
+        if let Some(sim) = self.sim.as_mut() {
+            block_on(async {
+                sim.abort();
+                sim.await.unwrap_or_else(|e| {
+                    if !e.is_cancelled() {
+                        error!("thread terminated with error: {}", e.to_string());
+                    }
                 });
-            }
+            });
         }
     }
 
