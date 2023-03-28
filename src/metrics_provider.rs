@@ -1,4 +1,4 @@
-use actix_web::{web, App, HttpServer, Responder};
+use actix_web::{dev::ServerHandle, web, App, HttpServer, Responder};
 use chrono::{Timelike, Utc};
 use futures_executor::block_on;
 use lazy_static::lazy_static;
@@ -8,6 +8,7 @@ use rand::distributions::Uniform;
 use rand::{thread_rng, Rng};
 use std::env;
 use std::net::{SocketAddr, ToSocketAddrs};
+use std::sync::mpsc;
 use tokio::task::JoinHandle;
 use tokio::time::Duration;
 
@@ -48,8 +49,10 @@ lazy_static! {
     };
 }
 
+#[derive(Default)]
 pub struct MetricsProvider {
-    threads: Vec<Option<JoinHandle<()>>>,
+    srv: Option<ServerHandle>,
+    sim: Option<JoinHandle<()>>,
 }
 
 impl MetricsProvider {
@@ -67,43 +70,49 @@ impl MetricsProvider {
             .register(Box::new(WIND_DIRECTION.clone()))
             .expect("WIND_DIRECTION can be registered");
 
-        MetricsProvider { threads: vec![] }
+        MetricsProvider::default()
     }
 
     pub fn run(&mut self, location: serde_json::Value) {
-        self.threads.push(Some(tokio::spawn(async move {
+        let (tx, rx) = mpsc::channel();
+        tokio::spawn(async move {
             block_on(async move {
-                let _ = HttpServer::new(|| {
+                let server = HttpServer::new(|| {
                     App::new().route("/metrics", web::get().to(Self::metrics_handler))
                 })
                 .workers(1)
                 .bind(*ADDR)
                 .unwrap()
-                .run()
-                .await;
-            })
-        })));
+                .run();
 
-        self.threads
-            .push(Some(tokio::spawn(MetricsProvider::data_collector(
-                location["latitude"].as_f64().unwrap(),
-                location["longitude"].as_f64().unwrap(),
-            ))));
+                let _ = tx.send(server.handle());
+
+                server.await
+            })
+        });
+
+        self.srv = Some(rx.recv().unwrap());
+
+        self.sim = Some(tokio::spawn(MetricsProvider::data_collector(
+            location["latitude"].as_f64().unwrap(),
+            location["longitude"].as_f64().unwrap(),
+        )));
     }
 
     pub fn stop(&mut self) {
-        for thread in self.threads.iter_mut() {
-            if thread.is_some() {
-                let thread = thread.as_mut().unwrap();
-                thread.abort();
-                block_on(async {
-                    thread.await.unwrap_or_else(|e| {
-                        if !e.is_cancelled() {
-                            error!("thread terminated with error: {}", e.to_string());
-                        }
-                    });
+        if let Some(srv) = &self.srv {
+            block_on(srv.stop(true));
+        }
+
+        if let Some(sim) = self.sim.as_mut() {
+            block_on(async {
+                sim.abort();
+                sim.await.unwrap_or_else(|e| {
+                    if !e.is_cancelled() {
+                        error!("thread terminated with error: {}", e.to_string());
+                    }
                 });
-            }
+            });
         }
     }
 
