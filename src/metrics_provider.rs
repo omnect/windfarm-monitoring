@@ -23,27 +23,28 @@ lazy_static! {
         IntGauge::new("wind_direction", "wind direction").expect("wind_direction can be created");
     static ref ADDR: SocketAddr = {
         let def = SocketAddr::from(([0, 0, 0, 0], 8080));
-        let addr = env::var_os("BIND_ADDR_AND_PORT").unwrap_or({
-            let addr = def.to_string();
-            info!("use default address: {}", addr);
-            addr.into()
-        });
 
-        addr.into_string()
-            .unwrap_or({
-                error!("cannot convert address string, use default address");
-                def.to_string()
-            })
-            .to_socket_addrs()
-            .unwrap_or({
-                error!("cannot convert to socket address, use default address");
-                vec![def].into_iter()
-            })
-            .next()
-            .unwrap_or({
-                error!("iterator empty, use default address");
-                def
-            })
+        let Some(addr) = env::var_os("BIND_ADDR_AND_PORT") else {
+            info!("use default address: {}", def.to_string());
+            return def;
+        };
+
+        let Ok(addr) = addr.into_string() else {
+            error!("cannot convert address string, use default address: {}", def.to_string());
+            return def;
+        };
+
+        let Ok(mut addr) = addr.to_socket_addrs() else {
+            error!("cannot convert to socket address, use default address: {}", def.to_string());
+            return def;
+        };
+
+        let Some(addr) = addr.next() else {
+            error!("iterator empty, use default address: {}", def.to_string());
+            return def;
+        };
+
+        addr
     };
 }
 
@@ -75,6 +76,7 @@ impl MetricsProvider {
                 let _ = HttpServer::new(|| {
                     App::new().route("/metrics", web::get().to(Self::metrics_handler))
                 })
+                .workers(1)
                 .bind(*ADDR)
                 .unwrap()
                 .run()
