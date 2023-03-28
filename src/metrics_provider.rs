@@ -1,4 +1,4 @@
-use anyhow::Result;
+use actix_web::{web, App, HttpServer, Responder};
 use chrono::{Timelike, Utc};
 use futures_executor::block_on;
 use lazy_static::lazy_static;
@@ -7,13 +7,9 @@ use prometheus::{Gauge, IntGauge, Registry};
 use rand::distributions::Uniform;
 use rand::{thread_rng, Rng};
 use std::env;
-use std::net::Ipv4Addr;
+use std::net::{SocketAddr, ToSocketAddrs};
 use tokio::task::JoinHandle;
 use tokio::time::Duration;
-use warp::{Filter, Rejection, Reply};
-
-const DEFAULT_PORT: u16 = 8080;
-const DEFAULT_BIND_ADDR: Ipv4Addr = Ipv4Addr::new(0, 0, 0, 0);
 
 lazy_static! {
     static ref REGISTRY: Registry = Registry::new();
@@ -25,19 +21,29 @@ lazy_static! {
         Gauge::new("wind_speed", "wind speed").expect("wind_speed can be created");
     static ref WIND_DIRECTION: IntGauge =
         IntGauge::new("wind_direction", "wind direction").expect("wind_direction can be created");
-    static ref PORT: u16 = {
-        if let Some(port) = env::var_os("PORT") {
-            port.into_string().unwrap().parse::<u16>().unwrap()
-        } else {
-            DEFAULT_PORT
-        }
-    };
-    static ref BIND_ADDR: Ipv4Addr = {
-        if let Some(addr) = env::var_os("BIND_ADDR") {
-            addr.into_string().unwrap().parse::<Ipv4Addr>().unwrap()
-        } else {
-            DEFAULT_BIND_ADDR
-        }
+    static ref ADDR: SocketAddr = {
+        let def = SocketAddr::from(([0, 0, 0, 0], 8080));
+        let addr = env::var_os("BIND_ADDR_AND_PORT").unwrap_or({
+            let addr = def.to_string();
+            info!("use default address: {}", addr);
+            addr.into()
+        });
+
+        addr.into_string()
+            .unwrap_or({
+                error!("cannot convert address string, use default address");
+                def.to_string()
+            })
+            .to_socket_addrs()
+            .unwrap_or({
+                error!("cannot convert to socket address, use default address");
+                vec![def].into_iter()
+            })
+            .next()
+            .unwrap_or({
+                error!("iterator empty, use default address");
+                def
+            })
     };
 }
 
@@ -65,9 +71,15 @@ impl MetricsProvider {
 
     pub fn run(&mut self, location: serde_json::Value) {
         self.threads.push(Some(tokio::spawn(async move {
-            warp::serve(warp::path!("metrics").and_then(MetricsProvider::metrics_handler))
-                .run((BIND_ADDR.octets(), *PORT))
+            block_on(async move {
+                let _ = HttpServer::new(|| {
+                    App::new().route("/metrics", web::get().to(Self::metrics_handler))
+                })
+                .bind(*ADDR)
+                .unwrap()
+                .run()
                 .await;
+            })
         })));
 
         self.threads
@@ -134,7 +146,7 @@ impl MetricsProvider {
         }
     }
 
-    async fn metrics_handler() -> Result<impl Reply, Rejection> {
+    async fn metrics_handler() -> impl Responder {
         use prometheus::Encoder;
 
         let encoder = prometheus::TextEncoder::new();
@@ -172,7 +184,7 @@ impl MetricsProvider {
 
         res.push_str(&res_custom);
 
-        Ok(res)
+        res
     }
 }
 
