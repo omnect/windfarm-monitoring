@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.2.0] Q4 2022
  - replaced warp by actix-web
+ - replaced BIND_ADDR and PORT by BIND_ADDR_AND_PORT
 
 ## [0.1.17] Q4 2022
  - fixed GHSA-4q83-7cq4-p6wg (explicit `cargo update`)
