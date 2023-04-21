@@ -1,6 +1,6 @@
 [package]
 name = "windfarm-monitoring"
-version = "0.2.1"
+version = "0.2.2"
 edition = "2021"
 authors = ["omnect@conplement.de>"]
 repository = "git@github.com:omnect/windfarm-monitoring.git"
