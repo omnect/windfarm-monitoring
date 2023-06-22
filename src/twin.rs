@@ -91,7 +91,7 @@ impl Twin {
     fn report_versions(&mut self) -> Result<()> {
         self.report_impl(json!({
             "module-version": env!("CARGO_PKG_VERSION"),
-            "azure-sdk-version": IotHubClient::get_sdk_version_string()
+            "azure-sdk-version": IotHubClient::sdk_version_string()
         }))
         .context("report_versions")
     }
