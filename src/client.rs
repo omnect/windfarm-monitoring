@@ -49,7 +49,7 @@ impl EventHandler for ClientEventHandler {
         Ok(())
     }
 
-    fn get_c2d_message_property_keys(&self) -> Vec<&'static str> {
+    fn c2d_message_property_keys(&self) -> Vec<&'static str> {
         vec!["p1", "p2"]
     }
 
@@ -63,7 +63,7 @@ impl EventHandler for ClientEventHandler {
         Ok(())
     }
 
-    fn get_direct_methods(&self) -> Option<&DirectMethodMap> {
+    fn direct_methods(&self) -> Option<&DirectMethodMap> {
         self.direct_methods.as_ref()
     }
 }
@@ -108,7 +108,7 @@ impl Client {
             #[cfg(feature = "systemd")]
             wdt.init()?;
 
-            let mut client = match IotHubClient::get_client_type() {
+            let mut client = match IotHubClient::client_type() {
                 _ if connection_string.is_some() => {
                     IotHubClient::from_connection_string(connection_string.unwrap(), event_handler)?
                 }
