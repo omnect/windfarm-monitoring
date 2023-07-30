@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] Q3 2023
+ - updated to azure-iot-sdk 0.10.0
+ - refactored to make use of async azure-iot-sdk API's
+
 ## [0.2.3] Q2 2023
  - updated to azure-iot-sdk 0.9.5
  - changed omnect git dependencies from ssh to https url's
