@@ -30,7 +30,7 @@ dependencies = [
  "actix-service",
  "actix-utils",
  "ahash 0.8.3",
- "base64 0.21.2",
+ "base64",
  "bitflags",
  "brotli",
  "bytes",
@@ -167,7 +167,7 @@ dependencies = [
  "serde_urlencoded",
  "smallvec",
  "socket2",
- "time 0.3.23",
+ "time",
  "url",
 ]
 
@@ -295,150 +295,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d468802bab17cbc0cc575e9b053f41e72aa36bfa6b7f55e3529ffa43161b97fa"
 
 [[package]]
-name = "aziot-cert-client-async"
-version = "0.1.0"
-source = "git+https://git@github.com/Azure/iot-identity-service.git?tag=1.4.1#f349b64d3b555b917a417f1c7543d245612495e3"
-dependencies = [
- "aziot-cert-common-http",
- "aziot-key-common",
- "http",
- "http-common",
- "hyper",
- "percent-encoding",
-]
-
-[[package]]
-name = "aziot-cert-common"
-version = "0.1.0"
-source = "git+https://git@github.com/Azure/iot-identity-service.git?tag=1.4.1#f349b64d3b555b917a417f1c7543d245612495e3"
-
-[[package]]
-name = "aziot-cert-common-http"
-version = "0.1.0"
-source = "git+https://git@github.com/Azure/iot-identity-service.git?tag=1.4.1#f349b64d3b555b917a417f1c7543d245612495e3"
-dependencies = [
- "aziot-key-common",
- "serde",
-]
-
-[[package]]
-name = "aziot-certd-config"
-version = "0.1.0"
-source = "git+https://git@github.com/Azure/iot-identity-service.git?tag=1.4.1#f349b64d3b555b917a417f1c7543d245612495e3"
-dependencies = [
- "cert-renewal",
- "hex",
- "http-common",
- "libc",
- "openssl",
- "serde",
- "serde_with",
- "url",
-]
-
-[[package]]
-name = "aziot-identity-client-async"
-version = "0.1.0"
-source = "git+https://git@github.com/Azure/iot-identity-service.git?tag=1.4.1#f349b64d3b555b917a417f1c7543d245612495e3"
-dependencies = [
- "aziot-cert-common-http",
- "aziot-identity-common",
- "aziot-identity-common-http",
- "http",
- "http-common",
- "hyper",
- "percent-encoding",
-]
-
-[[package]]
-name = "aziot-identity-common"
-version = "0.1.0"
-source = "git+https://git@github.com/Azure/iot-identity-service.git?tag=1.4.1#f349b64d3b555b917a417f1c7543d245612495e3"
-dependencies = [
- "aziot-key-common",
- "http-common",
- "openssl",
- "serde",
-]
-
-[[package]]
-name = "aziot-identity-common-http"
-version = "0.1.0"
-source = "git+https://git@github.com/Azure/iot-identity-service.git?tag=1.4.1#f349b64d3b555b917a417f1c7543d245612495e3"
-dependencies = [
- "aziot-cert-common-http",
- "aziot-identity-common",
- "aziot-identityd-config",
- "aziot-key-common",
- "http-common",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "aziot-identityd-config"
-version = "0.1.0"
-source = "git+https://git@github.com/Azure/iot-identity-service.git?tag=1.4.1#f349b64d3b555b917a417f1c7543d245612495e3"
-dependencies = [
- "aziot-identity-common",
- "cert-renewal",
- "http-common",
- "libc",
- "serde",
- "serde_json",
- "url",
-]
-
-[[package]]
-name = "aziot-key-client-async"
-version = "0.1.0"
-source = "git+https://git@github.com/Azure/iot-identity-service.git?tag=1.4.1#f349b64d3b555b917a417f1c7543d245612495e3"
-dependencies = [
- "aziot-key-common",
- "aziot-key-common-http",
- "http",
- "http-common",
- "hyper",
- "percent-encoding",
-]
-
-[[package]]
-name = "aziot-key-common"
-version = "0.1.0"
-source = "git+https://git@github.com/Azure/iot-identity-service.git?tag=1.4.1#f349b64d3b555b917a417f1c7543d245612495e3"
-dependencies = [
- "serde",
-]
-
-[[package]]
-name = "aziot-key-common-http"
-version = "0.1.0"
-source = "git+https://git@github.com/Azure/iot-identity-service.git?tag=1.4.1#f349b64d3b555b917a417f1c7543d245612495e3"
-dependencies = [
- "aziot-key-common",
- "http-common",
- "serde",
-]
-
-[[package]]
-name = "aziot-keyd-config"
-version = "0.1.0"
-source = "git+https://git@github.com/Azure/iot-identity-service.git?tag=1.4.1#f349b64d3b555b917a417f1c7543d245612495e3"
-dependencies = [
- "http-common",
- "libc",
- "serde",
-]
-
-[[package]]
 name = "azure-iot-sdk"
 version = "0.10.0"
-source = "git+https://github.com/JanZachmann/azure-iot-sdk.git?branch=async-api#1b9b11f0ce3a01232641af7eab524cd1267a2bdd"
+source = "git+https://github.com/omnect/azure-iot-sdk.git?tag=0.10.0#1054cf8a1cca161b936cbe7a510c1712403f42a5"
 dependencies = [
  "anyhow",
  "async-trait",
  "azure-iot-sdk-sys",
- "eis-utils",
  "log",
  "serde_json",
  "tokio",
@@ -467,12 +330,6 @@ dependencies = [
  "object",
  "rustc-demangle",
 ]
-
-[[package]]
-name = "base64"
-version = "0.13.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9e1b586273c5702936fe7b7d6896644d8be71e6314cfe09d3167c95f712589e8"
 
 [[package]]
 name = "base64"
@@ -575,22 +432,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cert-renewal"
-version = "0.1.0"
-source = "git+https://git@github.com/Azure/iot-identity-service.git?tag=1.4.1#f349b64d3b555b917a417f1c7543d245612495e3"
-dependencies = [
- "async-trait",
- "aziot-cert-client-async",
- "aziot-key-client-async",
- "chrono",
- "futures-util",
- "log",
- "openssl",
- "serde",
- "tokio",
-]
-
-[[package]]
 name = "cexpr"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -613,11 +454,7 @@ checksum = "ec837a71355b28f6556dbd569b37b3f363091c0bd4b2e735674521b4c5fd9bc5"
 dependencies = [
  "android-tzdata",
  "iana-time-zone",
- "js-sys",
  "num-traits",
- "serde",
- "time 0.1.45",
- "wasm-bindgen",
  "winapi",
 ]
 
@@ -645,7 +482,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e859cd57d0710d9e06c381b550c06e76992472a8c6d527aecd2fc673dcc231fb"
 dependencies = [
  "percent-encoding",
- "time 0.3.23",
+ "time",
  "version_check",
 ]
 
@@ -684,41 +521,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "darling"
-version = "0.20.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0209d94da627ab5605dcccf08bb18afa5009cfbef48d8a8b7d7bdbc79be25c5e"
-dependencies = [
- "darling_core",
- "darling_macro",
-]
-
-[[package]]
-name = "darling_core"
-version = "0.20.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "177e3443818124b357d8e76f53be906d60937f0d3a90773a664fa63fa253e621"
-dependencies = [
- "fnv",
- "ident_case",
- "proc-macro2 1.0.66",
- "quote 1.0.32",
- "strsim",
- "syn 2.0.27",
-]
-
-[[package]]
-name = "darling_macro"
-version = "0.20.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "836a9bbc7ad63342d6d6e7b815ccab164bc77a2d95d84bc3117a8c0d5c98e2d5"
-dependencies = [
- "darling_core",
- "quote 1.0.32",
- "syn 2.0.27",
-]
-
-[[package]]
 name = "default-env"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -750,34 +552,6 @@ checksum = "9ed9a281f7bc9b7576e61468ba615a66a5c8cfdff42420a70aa82701a3b1e292"
 dependencies = [
  "block-buffer",
  "crypto-common",
-]
-
-[[package]]
-name = "eis-utils"
-version = "0.3.0"
-source = "git+https://github.com/omnect/eis-utils.git?tag=0.3.0#8baffddba778dde438441cc05de8bb9d3336bd44"
-dependencies = [
- "aziot-cert-client-async",
- "aziot-cert-common",
- "aziot-cert-common-http",
- "aziot-certd-config",
- "aziot-identity-client-async",
- "aziot-identity-common",
- "aziot-identity-common-http",
- "aziot-identityd-config",
- "aziot-key-client-async",
- "aziot-key-common",
- "aziot-key-common-http",
- "aziot-keyd-config",
- "base64 0.13.1",
- "env_logger",
- "http-common",
- "hyper",
- "hyper-timeout",
- "log",
- "percent-encoding",
- "tokio",
- "url",
 ]
 
 [[package]]
@@ -846,52 +620,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
 
 [[package]]
-name = "foreign-types"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f6f339eb8adc052cd2ca78910fda869aefa38d22d5cb648e6485e4d3fc06f3b1"
-dependencies = [
- "foreign-types-shared",
-]
-
-[[package]]
-name = "foreign-types-shared"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "00b0228411908ca8685dba7fc2cdd70ec9990a6e753e89b6ac91a84c40fbaf4b"
-
-[[package]]
 name = "form_urlencoded"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a62bc1cf6f830c2ec14a513a9fb124d0a213a629668a4186f329db21fe045652"
 dependencies = [
  "percent-encoding",
-]
-
-[[package]]
-name = "futures"
-version = "0.3.28"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "23342abe12aba583913b2e62f22225ff9c950774065e4bfb61a19cd9770fec40"
-dependencies = [
- "futures-channel",
- "futures-core",
- "futures-executor",
- "futures-io",
- "futures-sink",
- "futures-task",
- "futures-util",
-]
-
-[[package]]
-name = "futures-channel"
-version = "0.3.28"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "955518d47e09b25bbebc7a18df10b81f0c766eaf4c4f1cccef2fca5f2a4fb5f2"
-dependencies = [
- "futures-core",
- "futures-sink",
 ]
 
 [[package]]
@@ -912,23 +646,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "futures-io"
-version = "0.3.28"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4fff74096e71ed47f8e023204cfd0aa1289cd54ae5430a9523be060cdb849964"
-
-[[package]]
-name = "futures-macro"
-version = "0.3.28"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "89ca545a94061b6365f2c7355b4b32bd20df3ff95f02da9329b34ccc3bd6ee72"
-dependencies = [
- "proc-macro2 1.0.66",
- "quote 1.0.32",
- "syn 2.0.27",
-]
-
-[[package]]
 name = "futures-sink"
 version = "0.3.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -946,13 +663,8 @@ version = "0.3.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "26b01e40b772d54cf6c6d721c1d1abd0647a0106a12ecaa1c186273392a69533"
 dependencies = [
- "futures-channel",
  "futures-core",
- "futures-io",
- "futures-macro",
- "futures-sink",
  "futures-task",
- "memchr",
  "pin-project-lite",
  "pin-utils",
  "slab",
@@ -976,7 +688,7 @@ checksum = "be4136b2a15dd319360be1c07d9933517ccf0be8f16bf62a3bee4f0d618df427"
 dependencies = [
  "cfg-if",
  "libc",
- "wasi 0.11.0+wasi-snapshot-preview1",
+ "wasi",
 ]
 
 [[package]]
@@ -1017,31 +729,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8a9ee70c43aaf417c914396645a0fa852624801b24ebb7ae78fe8272889ac888"
 
 [[package]]
-name = "headers"
-version = "0.3.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f3e372db8e5c0d213e0cd0b9be18be2aca3d44cf2fe30a9d46a65581cd454584"
-dependencies = [
- "base64 0.13.1",
- "bitflags",
- "bytes",
- "headers-core",
- "http",
- "httpdate",
- "mime",
- "sha1",
-]
-
-[[package]]
-name = "headers-core"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e7f66481bfee273957b1f20485a4ff3362987f85b2c236580d81b4eb7a326429"
-dependencies = [
- "http",
-]
-
-[[package]]
 name = "hermit-abi"
 version = "0.1.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1074,43 +761,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "http-body"
-version = "0.4.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d5f38f16d184e36f2408a55281cd658ecbd3ca05cce6d6510a176eca393e26d1"
-dependencies = [
- "bytes",
- "http",
- "pin-project-lite",
-]
-
-[[package]]
-name = "http-common"
-version = "0.1.0"
-source = "git+https://git@github.com/Azure/iot-identity-service.git?tag=1.4.1#f349b64d3b555b917a417f1c7543d245612495e3"
-dependencies = [
- "async-trait",
- "base64 0.13.1",
- "futures-util",
- "headers",
- "http",
- "hyper",
- "hyper-openssl",
- "hyper-proxy",
- "libc",
- "log",
- "nix",
- "openssl",
- "openssl-sys",
- "percent-encoding",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
- "url",
-]
-
-[[package]]
 name = "httparse"
 version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1127,77 +777,6 @@ name = "humantime"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9a3a5bfb195931eeb336b2a7b4d761daec841b97f947d34394601737a7bba5e4"
-
-[[package]]
-name = "hyper"
-version = "0.14.27"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ffb1cfd654a8219eaef89881fdb3bb3b1cdc5fa75ded05d6933b2b382e395468"
-dependencies = [
- "bytes",
- "futures-channel",
- "futures-core",
- "futures-util",
- "h2",
- "http",
- "http-body",
- "httparse",
- "httpdate",
- "itoa",
- "pin-project-lite",
- "socket2",
- "tokio",
- "tower-service",
- "tracing",
- "want",
-]
-
-[[package]]
-name = "hyper-openssl"
-version = "0.9.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d6ee5d7a8f718585d1c3c61dfde28ef5b0bb14734b4db13f5ada856cdc6c612b"
-dependencies = [
- "http",
- "hyper",
- "linked_hash_set",
- "once_cell",
- "openssl",
- "openssl-sys",
- "parking_lot",
- "tokio",
- "tokio-openssl",
- "tower-layer",
-]
-
-[[package]]
-name = "hyper-proxy"
-version = "0.9.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ca815a891b24fdfb243fa3239c86154392b0953ee584aa1a2a1f66d20cbe75cc"
-dependencies = [
- "bytes",
- "futures",
- "headers",
- "http",
- "hyper",
- "openssl",
- "tokio",
- "tokio-openssl",
- "tower-service",
-]
-
-[[package]]
-name = "hyper-timeout"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bbb958482e8c7be4bc3cf272a766a2b0bf1a6755e7a6ae777f017a31d11b13b1"
-dependencies = [
- "hyper",
- "pin-project-lite",
- "tokio",
- "tokio-io-timeout",
-]
 
 [[package]]
 name = "iana-time-zone"
@@ -1223,12 +802,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ident_case"
-version = "1.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b9e0384b61958566e926dc50660321d12159025e767c18e043daf26b70104c39"
-
-[[package]]
 name = "idna"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1246,7 +819,6 @@ checksum = "bd070e393353796e801d209ad339e89596eb4c8d430d18ede6a1cced8fafbd99"
 dependencies = [
  "autocfg",
  "hashbrown",
- "serde",
 ]
 
 [[package]]
@@ -1319,21 +891,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "linked-hash-map"
-version = "0.5.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0717cef1bc8b636c6e1c1bbdefc09e6322da8a9321966e8928ef80d20f7f770f"
-
-[[package]]
-name = "linked_hash_set"
-version = "0.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "47186c6da4d81ca383c7c47c1bfc80f4b95f4720514d860a5407aaf4233f9588"
-dependencies = [
- "linked-hash-map",
-]
-
-[[package]]
 name = "linux-raw-sys"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1390,15 +947,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2dffe52ecf27772e601905b7522cb4ef790d2cc203488bbd0e2fe85fcb74566d"
 
 [[package]]
-name = "memoffset"
-version = "0.6.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5aa361d4faea93603064a027415f07bd8e1d5c88c9fbf68bf56a285428fd79ce"
-dependencies = [
- "autocfg",
-]
-
-[[package]]
 name = "mime"
 version = "0.3.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1427,20 +975,8 @@ checksum = "927a765cd3fc26206e66b296465fa9d3e5ab003e651c1b3c060e7956d96b19d2"
 dependencies = [
  "libc",
  "log",
- "wasi 0.11.0+wasi-snapshot-preview1",
+ "wasi",
  "windows-sys 0.48.0",
-]
-
-[[package]]
-name = "nix"
-version = "0.24.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa52e972a9a719cecb6864fb88568781eb706bac2cd1d4f04a648542dbf78069"
-dependencies = [
- "bitflags",
- "cfg-if",
- "libc",
- "memoffset",
 ]
 
 [[package]]
@@ -1486,44 +1022,6 @@ name = "once_cell"
 version = "1.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dd8b5dd2ae5ed71462c540258bedcb51965123ad7e7ccf4b9a8cafaa4a63576d"
-
-[[package]]
-name = "openssl"
-version = "0.10.55"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "345df152bc43501c5eb9e4654ff05f794effb78d4efe3d53abc158baddc0703d"
-dependencies = [
- "bitflags",
- "cfg-if",
- "foreign-types",
- "libc",
- "once_cell",
- "openssl-macros",
- "openssl-sys",
-]
-
-[[package]]
-name = "openssl-macros"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a948666b637a0f465e8564c73e89d4dde00d72d4d473cc972f390fc3dcee7d9c"
-dependencies = [
- "proc-macro2 1.0.66",
- "quote 1.0.32",
- "syn 2.0.27",
-]
-
-[[package]]
-name = "openssl-sys"
-version = "0.9.90"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "374533b0e45f3a7ced10fcaeccca020e66656bc03dac384f852e4e5a7a8104a6"
-dependencies = [
- "cc",
- "libc",
- "pkg-config",
- "vcpkg",
-]
 
 [[package]]
 name = "parking_lot"
@@ -1827,34 +1325,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "serde_with"
-version = "2.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "07ff71d2c147a7b57362cead5e22f772cd52f6ab31cfcd9edcd7f6aeb2a0afbe"
-dependencies = [
- "base64 0.13.1",
- "chrono",
- "hex",
- "indexmap",
- "serde",
- "serde_json",
- "serde_with_macros",
- "time 0.3.23",
-]
-
-[[package]]
-name = "serde_with_macros"
-version = "2.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "881b6f881b17d13214e5d494c939ebab463d01264ce1811e9d4ac3a882e7695f"
-dependencies = [
- "darling",
- "proc-macro2 1.0.66",
- "quote 1.0.32",
- "syn 2.0.27",
-]
-
-[[package]]
 name = "sha1"
 version = "0.10.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1904,12 +1374,6 @@ dependencies = [
  "libc",
  "winapi",
 ]
-
-[[package]]
-name = "strsim"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "73473c0e59e6d5812c5dfe2a064a6444949f089e20eec9a2e5506596494e4623"
 
 [[package]]
 name = "syn"
@@ -1975,17 +1439,6 @@ dependencies = [
 
 [[package]]
 name = "time"
-version = "0.1.45"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b797afad3f312d1c66a56d11d0316f916356d11bd158fbc6ca6389ff6bf805a"
-dependencies = [
- "libc",
- "wasi 0.10.0+wasi-snapshot-preview1",
- "winapi",
-]
-
-[[package]]
-name = "time"
 version = "0.3.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "59e399c068f43a5d116fedaf73b203fa4f9c519f17e2b34f63221d3792f81446"
@@ -2047,16 +1500,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tokio-io-timeout"
-version = "1.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "30b74022ada614a1b4834de765f9bb43877f910cc8ce4be40e89042c9223a8bf"
-dependencies = [
- "pin-project-lite",
- "tokio",
-]
-
-[[package]]
 name = "tokio-macros"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2065,18 +1508,6 @@ dependencies = [
  "proc-macro2 1.0.66",
  "quote 1.0.32",
  "syn 2.0.27",
-]
-
-[[package]]
-name = "tokio-openssl"
-version = "0.6.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c08f9ffb7809f1b20c1b398d92acf4cc719874b3b2b2d9ea2f09b4a80350878a"
-dependencies = [
- "futures-util",
- "openssl",
- "openssl-sys",
- "tokio",
 ]
 
 [[package]]
@@ -2094,18 +1525,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tower-layer"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c20c8dbed6283a09604c3e69b4b7eeb54e298b8a600d4d5ecb5ad39de609f1d0"
-
-[[package]]
-name = "tower-service"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b6bc1c9ce2b5135ac7f93c72918fc37feb872bdc6a5533a8b85eb4b86bfdae52"
-
-[[package]]
 name = "tracing"
 version = "0.1.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2114,19 +1533,7 @@ dependencies = [
  "cfg-if",
  "log",
  "pin-project-lite",
- "tracing-attributes",
  "tracing-core",
-]
-
-[[package]]
-name = "tracing-attributes"
-version = "0.1.26"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5f4f31f56159e98206da9efd823404b79b6ef3143b4a7ab76e67b1751b25a4ab"
-dependencies = [
- "proc-macro2 1.0.66",
- "quote 1.0.32",
- "syn 2.0.27",
 ]
 
 [[package]]
@@ -2137,12 +1544,6 @@ checksum = "0955b8137a1df6f1a2e9a37d8a6656291ff0297c1a97c24e0d8425fe2312f79a"
 dependencies = [
  "once_cell",
 ]
-
-[[package]]
-name = "try-lock"
-version = "0.2.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3528ecfd12c466c6f163363caf2d02a71161dd5e1cc6ae7b34207ea2d42d81ed"
 
 [[package]]
 name = "typenum"
@@ -2186,35 +1587,13 @@ dependencies = [
  "form_urlencoded",
  "idna",
  "percent-encoding",
- "serde",
 ]
-
-[[package]]
-name = "vcpkg"
-version = "0.2.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "accd4ea62f7bb7a82fe23066fb0957d48ef677f6eeb8215f372f52e48bb32426"
 
 [[package]]
 name = "version_check"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
-
-[[package]]
-name = "want"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bfa7760aed19e106de2c7c0b581b509f2f25d3dacaf737cb82ac61bc6d760b0e"
-dependencies = [
- "try-lock",
-]
-
-[[package]]
-name = "wasi"
-version = "0.10.0+wasi-snapshot-preview1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1a143597ca7c7793eff794def352d41792a93c481eb1042423ff7ff72ba2c31f"
 
 [[package]]
 name = "wasi"
@@ -2336,7 +1715,7 @@ dependencies = [
  "rand",
  "serde",
  "serde_json",
- "time 0.3.23",
+ "time",
  "tokio",
 ]
 
