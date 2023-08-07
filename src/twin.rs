@@ -25,7 +25,7 @@ impl Twin {
     ) -> Self {
         Twin {
             iothub_client: client,
-            tx_reported_properties: tx_reported_properties.clone(),
+            tx_reported_properties,
             authenticated_once: false,
             location_once: false,
             metrics_provider: MetricsProvider::new(),
