@@ -1,7 +1,7 @@
 [package]
 authors = ["omnect@conplement.de>"]
 edition = "2021"
-description = "This edge module simulates metrics of a virtua windfarm device."
+description = "This edge module simulates metrics of a virtual windfarm device."
 homepage = "https://www.omnect.io/home"
 license = "MIT OR Apache-2.0"
 name = "windfarm-monitoring"
