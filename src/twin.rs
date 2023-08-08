@@ -1,106 +1,73 @@
 use crate::metrics_provider::MetricsProvider;
-use crate::Message;
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use azure_iot_sdk::client::*;
-use log::{info, warn};
-use once_cell::sync::OnceCell;
+use log::{error, info};
 use rand::{thread_rng, Rng};
 use serde_json::json;
-use std::sync::mpsc::Sender;
-use std::sync::{Mutex, MutexGuard, Once};
+use tokio::{
+    select,
+    sync::mpsc,
+    time::{timeout, Duration},
+};
 
-static INSTANCE: OnceCell<Mutex<Twin>> = OnceCell::new();
-static LOCATION_ONCE: Once = Once::new();
-
-pub struct TwinInstance {
-    inner: &'static Mutex<Twin>,
-}
-
-pub fn get_or_init(tx: Option<&Sender<Message>>) -> TwinInstance {
-    if let Some(tx) = tx {
-        TwinInstance {
-            inner: INSTANCE.get_or_init(|| {
-                Mutex::new(Twin {
-                    tx: Some(tx.clone()),
-                    metrics_provider: Some(MetricsProvider::new()),
-                })
-            }),
-        }
-    } else {
-        TwinInstance {
-            inner: INSTANCE.get().unwrap(),
-        }
-    }
-}
-
-struct TwinLock<'a> {
-    inner: MutexGuard<'a, Twin>,
-}
-
-impl TwinInstance {
-    fn lock(&self) -> TwinLock<'_> {
-        TwinLock {
-            inner: self.inner.lock().unwrap_or_else(|e| e.into_inner()),
-        }
-    }
-
-    pub fn report(&self, property: &ReportProperty) -> Result<()> {
-        self.lock().inner.report(property)
-    }
-
-    pub fn update(&self, state: TwinUpdateState, desired: serde_json::Value) -> Result<()> {
-        self.lock().inner.update(state, desired)
-    }
-
-    pub fn cloud_message(&self, msg: IotMessage) {
-        warn!(
-            "received unexpected C2D message with \n body: {:?}\n properties: {:?} \n system properties: {:?}",
-            std::str::from_utf8(&msg.body).unwrap(),
-            msg.properties,
-            msg.system_properties
-        );
-    }
-}
-
-#[derive(Default)]
-struct Twin {
-    tx: Option<Sender<Message>>,
-    metrics_provider: Option<MetricsProvider>,
-}
-
-pub enum ReportProperty {
-    Versions,
+pub struct Twin {
+    iothub_client: Box<dyn IotHub>,
+    authenticated_once: bool,
+    location_once: bool,
+    metrics_provider: MetricsProvider,
+    tx_reported_properties: mpsc::Sender<serde_json::Value>,
 }
 
 impl Twin {
-    fn update(&mut self, state: TwinUpdateState, desired: serde_json::Value) -> Result<()> {
-        match state {
-            TwinUpdateState::Partial => Ok(()),
-            TwinUpdateState::Complete => {
-                self.update_location(desired["reported"]["location"].as_object())
+    pub fn new(
+        client: Box<dyn IotHub>,
+        tx_reported_properties: mpsc::Sender<serde_json::Value>,
+    ) -> Self {
+        Twin {
+            iothub_client: client,
+            tx_reported_properties,
+            authenticated_once: false,
+            location_once: false,
+            metrics_provider: MetricsProvider::new(),
+        }
+    }
+
+    async fn handle_connection_status(&mut self, auth_status: AuthenticationStatus) -> Result<()> {
+        info!("auth_status: {auth_status:#?}");
+
+        match auth_status {
+            AuthenticationStatus::Authenticated => {
+                if !self.authenticated_once {
+                    self.authenticated_once = true;
+
+                    self.tx_reported_properties
+                        .send(json!({
+                            "module-version": env!("CARGO_PKG_VERSION"),
+                            "azure-sdk-version": IotHubClient::sdk_version_string()
+                        }))
+                        .await?;
+                };
+            }
+            AuthenticationStatus::Unauthenticated(reason) => {
+                anyhow::ensure!(
+                    matches!(reason, UnauthenticatedReason::ExpiredSasToken),
+                    "No connection. Reason: {reason:?}"
+                );
             }
         }
+
+        Ok(())
     }
 
-    fn report(&mut self, property: &ReportProperty) -> Result<()> {
-        match property {
-            ReportProperty::Versions => self.report_versions().context("Couldn't report version"),
-        }
-    }
-
-    fn report_versions(&mut self) -> Result<()> {
-        self.report_impl(json!({
-            "module-version": env!("CARGO_PKG_VERSION"),
-            "azure-sdk-version": IotHubClient::sdk_version_string()
-        }))
-        .context("report_versions")
-    }
-
-    fn update_location(
+    async fn handle_desired(
         &mut self,
-        coordinates: Option<&serde_json::Map<String, serde_json::Value>>,
+        state: TwinUpdateState,
+        desired: serde_json::Value,
     ) -> Result<()> {
-        LOCATION_ONCE.call_once(|| {
+        info!("desired: {state:#?}, {desired}");
+
+        let coordinates = desired["reported"]["location"].as_object();
+        if !self.location_once {
             let location = match coordinates {
                 Some(values) => json!({ "location": values }),
                 _ => json!({
@@ -111,25 +78,56 @@ impl Twin {
                 }),
             };
 
-            self.report_impl(location.clone())
-                .context("update_location")
-                .unwrap();
+            self.tx_reported_properties.send(location.clone()).await?;
 
-            self.metrics_provider
-                .as_mut()
-                .unwrap()
-                .run(location["location"].clone());
-        });
+            self.metrics_provider.run(location["location"].clone());
+
+            self.location_once = true;
+        };
         Ok(())
     }
 
-    fn report_impl(&mut self, value: serde_json::Value) -> Result<()> {
-        info!("report: {}", value);
+    async fn handle_report_property(&mut self, properties: serde_json::Value) -> Result<()> {
+        info!("report: {properties}");
 
-        self.tx
-            .as_ref()
-            .ok_or_else(|| anyhow::anyhow!("tx channel missing"))?
-            .send(Message::Reported(value))
-            .map_err(|err| err.into())
+        match timeout(
+            Duration::from_secs(5),
+            self.iothub_client.twin_report(properties),
+        )
+        .await
+        {
+            Ok(result) => result.context("handle_report_property: couldn't report property"),
+            Err(_) => Err(anyhow!("handle_report_property: timeout occured")),
+        }
+    }
+
+    pub async fn run() -> Result<()> {
+        let (tx_connection_status, mut rx_connection_status) = mpsc::channel(100);
+        let (tx_twin_desired, mut rx_twin_desired) = mpsc::channel(100);
+        let (tx_reported_properties, mut rx_reported_properties) = mpsc::channel(100);
+
+        let client = IotHubClient::from_edge_environment(
+            Some(tx_connection_status.clone()),
+            Some(tx_twin_desired.clone()),
+            None,
+            None,
+        )?;
+
+        let mut twin = Self::new(client, tx_reported_properties);
+
+        loop {
+            select! (
+                status = rx_connection_status.recv() => {
+                    twin.handle_connection_status(status.unwrap()).await?;
+                },
+                desired = rx_twin_desired.recv() => {
+                    let (state, desired) = desired.unwrap();
+                    twin.handle_desired(state, desired).await.unwrap_or_else(|e| error!("twin update desired properties: {e:#?}"));
+                },
+                reported = rx_reported_properties.recv() => {
+                    twin.handle_report_property(reported.unwrap()).await?;
+                },
+            );
+        }
     }
 }
