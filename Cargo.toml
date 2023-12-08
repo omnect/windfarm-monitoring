@@ -7,7 +7,7 @@ license = "MIT OR Apache-2.0"
 name = "windfarm-monitoring"
 readme = "README.md"
 repository = "git@github.com:omnect/windfarm-monitoring.git"
-version = "0.3.1"
+version = "0.3.2"
 
 [dependencies]
 actix-web = "4.3"
@@ -17,7 +17,7 @@ azure-iot-sdk = { git = "https://github.com/omnect/azure-iot-sdk.git", tag = "0.
 ] }
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
 default-env = "0.1"
-env_logger = "0.8"
+env_logger = "0.10"
 futures-executor = "0.3"
 lazy_static = "1.4"
 log = "0.4"
