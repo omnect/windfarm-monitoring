@@ -1,14 +1,10 @@
 use crate::metrics_provider::MetricsProvider;
-use anyhow::{anyhow, Context, Result};
+use anyhow::Result;
 use azure_iot_sdk::client::*;
 use log::{error, info};
 use rand::{thread_rng, Rng};
 use serde_json::json;
-use tokio::{
-    select,
-    sync::mpsc,
-    time::{timeout, Duration},
-};
+use tokio::{select, sync::mpsc};
 
 pub struct Twin {
     iothub_client: Box<dyn IotHub>,
@@ -87,20 +83,6 @@ impl Twin {
         Ok(())
     }
 
-    async fn handle_report_property(&mut self, properties: serde_json::Value) -> Result<()> {
-        info!("report: {properties}");
-
-        match timeout(
-            Duration::from_secs(5),
-            self.iothub_client.twin_report(properties),
-        )
-        .await
-        {
-            Ok(result) => result.context("handle_report_property: couldn't report property"),
-            Err(_) => Err(anyhow!("handle_report_property: timeout occured")),
-        }
-    }
-
     pub async fn run() -> Result<()> {
         let (tx_connection_status, mut rx_connection_status) = mpsc::channel(100);
         let (tx_twin_desired, mut rx_twin_desired) = mpsc::channel(100);
@@ -122,10 +104,10 @@ impl Twin {
                 },
                 desired = rx_twin_desired.recv() => {
                     let (state, desired) = desired.unwrap();
-                    twin.handle_desired(state, desired).await.unwrap_or_else(|e| error!("twin update desired properties: {e:#?}"));
+                    twin.handle_desired(state, desired).await.unwrap_or_else(|e| error!("twin update desired properties: {e:#}"));
                 },
                 reported = rx_reported_properties.recv() => {
-                    twin.handle_report_property(reported.unwrap()).await?;
+                    twin.iothub_client.twin_report(reported.unwrap())?
                 },
             );
         }

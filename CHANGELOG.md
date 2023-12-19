@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.3] Q4 2023
+ - updated to azure-iot-sdk 0.11.6
+ - removed multiline error log messages to get a more compact view in the journal
+
 ## [0.3.2] Q4 2023
  - bumbed env_logger to 0.10
  - error log messages are forced to be sent to STDERR, all other log messages are sent to STDOUT
