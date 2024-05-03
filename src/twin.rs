@@ -7,21 +7,22 @@ use serde_json::json;
 use tokio::{select, sync::mpsc};
 
 pub struct Twin {
-    iothub_client: Box<dyn IotHub>,
+    iothub_client: IotHubClient,
     authenticated_once: bool,
     location_once: bool,
     metrics_provider: MetricsProvider,
     tx_reported_properties: mpsc::Sender<serde_json::Value>,
+    rx_reported_properties: mpsc::Receiver<serde_json::Value>,
 }
 
 impl Twin {
-    pub fn new(
-        client: Box<dyn IotHub>,
-        tx_reported_properties: mpsc::Sender<serde_json::Value>,
-    ) -> Self {
+    pub fn new(client: IotHubClient) -> Self {
+        let (tx_reported_properties, rx_reported_properties) = mpsc::channel(100);
+        
         Twin {
             iothub_client: client,
             tx_reported_properties,
+            rx_reported_properties,
             authenticated_once: false,
             location_once: false,
             metrics_provider: MetricsProvider::new(),
@@ -86,16 +87,13 @@ impl Twin {
     pub async fn run() -> Result<()> {
         let (tx_connection_status, mut rx_connection_status) = mpsc::channel(100);
         let (tx_twin_desired, mut rx_twin_desired) = mpsc::channel(100);
-        let (tx_reported_properties, mut rx_reported_properties) = mpsc::channel(100);
 
-        let client = IotHubClient::from_edge_environment(
-            Some(tx_connection_status.clone()),
-            Some(tx_twin_desired.clone()),
-            None,
-            None,
-        )?;
-
-        let mut twin = Self::new(client, tx_reported_properties);
+        let mut twin = Self::new(
+            IotHubClient::builder()
+                .observe_connection_state(tx_connection_status)
+                .observe_desired_properties(tx_twin_desired)
+                .build_edge_client()?,
+        );
 
         loop {
             select! (
@@ -103,10 +101,12 @@ impl Twin {
                     twin.handle_connection_status(status.unwrap()).await?;
                 },
                 desired = rx_twin_desired.recv() => {
-                    let (state, desired) = desired.unwrap();
-                    twin.handle_desired(state, desired).await.unwrap_or_else(|e| error!("twin update desired properties: {e:#}"));
+                    let desired = desired.unwrap();
+                    twin.handle_desired(desired.state, desired.value)
+                        .await
+                        .unwrap_or_else(|e| error!("twin update desired properties: {e:#}"));
                 },
-                reported = rx_reported_properties.recv() => {
+                reported = twin.rx_reported_properties.recv() => {
                     twin.iothub_client.twin_report(reported.unwrap())?
                 },
             );

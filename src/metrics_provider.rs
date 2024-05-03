@@ -1,4 +1,5 @@
-use actix_web::{dev::ServerHandle, web, App, HttpServer, Responder};
+use actix_web::{web, App, HttpServer, Responder};
+use actix_server::ServerHandle;
 use chrono::{Timelike, Utc};
 use futures_executor::block_on;
 use lazy_static::lazy_static;
@@ -8,7 +9,6 @@ use rand::distributions::Uniform;
 use rand::{thread_rng, Rng};
 use std::env;
 use std::net::{SocketAddr, ToSocketAddrs};
-use std::sync::mpsc;
 use tokio::task::JoinHandle;
 use tokio::time::Duration;
 
@@ -31,12 +31,18 @@ lazy_static! {
         };
 
         let Ok(addr) = addr.into_string() else {
-            error!("cannot convert address string, use default address: {}", def.to_string());
+            error!(
+                "cannot convert address string, use default address: {}",
+                def.to_string()
+            );
             return def;
         };
 
         let Ok(mut addr) = addr.to_socket_addrs() else {
-            error!("cannot convert to socket address, use default address: {}", def.to_string());
+            error!(
+                "cannot convert to socket address, use default address: {}",
+                def.to_string()
+            );
             return def;
         };
 
@@ -74,24 +80,16 @@ impl MetricsProvider {
     }
 
     pub fn run(&mut self, location: serde_json::Value) {
-        let (tx, rx) = mpsc::channel();
-        tokio::spawn(async move {
-            block_on(async move {
-                let server = HttpServer::new(|| {
-                    App::new().route("/metrics", web::get().to(Self::metrics_handler))
-                })
+        let server =
+            HttpServer::new(|| App::new().route("/metrics", web::get().to(Self::metrics_handler)))
                 .workers(1)
                 .bind(*ADDR)
                 .unwrap()
                 .run();
 
-                let _ = tx.send(server.handle());
+        self.srv = Some(server.handle());
 
-                server.await
-            })
-        });
-
-        self.srv = Some(rx.recv().unwrap());
+        tokio::spawn(server);
 
         self.sim = Some(tokio::spawn(MetricsProvider::data_collector(
             location["latitude"].as_f64().unwrap(),
@@ -99,19 +97,17 @@ impl MetricsProvider {
         )));
     }
 
-    pub fn stop(&mut self) {
+    pub async fn stop(&mut self) {
         if let Some(srv) = &self.srv {
-            block_on(srv.stop(true));
+            srv.stop(false).await;
         }
 
         if let Some(sim) = self.sim.as_mut() {
-            block_on(async {
-                sim.abort();
-                sim.await.unwrap_or_else(|e| {
-                    if !e.is_cancelled() {
-                        error!("thread terminated with error: {}", e.to_string());
-                    }
-                });
+            sim.abort();
+            sim.await.unwrap_or_else(|e| {
+                if !e.is_cancelled() {
+                    error!("thread terminated with error: {}", e.to_string());
+                }
             });
         }
     }
@@ -201,6 +197,6 @@ impl MetricsProvider {
 
 impl Drop for MetricsProvider {
     fn drop(&mut self) {
-        self.stop();
+        block_on(async { self.stop().await });
     }
 }
