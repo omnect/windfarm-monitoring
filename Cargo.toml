@@ -18,7 +18,7 @@ azure-iot-sdk = { git = "https://github.com/omnect/azure-iot-sdk.git", tag = "0.
 ] }
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
 default-env = "0.1"
-env_logger = "0.11"
+env_logger = { version = "0.11", default-features = false }
 futures-executor = "0.3"
 lazy_static = "1.4"
 log = "0.4"
