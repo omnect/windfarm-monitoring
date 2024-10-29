@@ -10,10 +10,11 @@ repository = "git@github.com:omnect/windfarm-monitoring.git"
 version = "0.3.7"
 
 [dependencies]
-actix-web = "4.5"
-actix-server = "2.3"
 anyhow = "1.0"
-azure-iot-sdk = { git = "https://github.com/omnect/azure-iot-sdk.git", tag = "0.13.1", features = [
+#azure-iot-sdk = { git = "https://github.com/omnect/azure-iot-sdk.git", tag = "0.13.5", features = [
+#    "module_client",
+#] }
+azure-iot-sdk = { git = "https://github.com/omnect/azure-iot-sdk.git", tag = "0.13.5", features = [
     "edge_client",
 ] }
 chrono = { version = "0.4", default-features = false, features = ["clock"] }

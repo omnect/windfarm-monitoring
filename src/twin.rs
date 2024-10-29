@@ -1,5 +1,5 @@
 use crate::metrics_provider::MetricsProvider;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use azure_iot_sdk::client::*;
 use log::{error, info};
 use rand::{thread_rng, Rng};
@@ -13,16 +13,20 @@ pub struct Twin {
     metrics_provider: MetricsProvider,
     tx_reported_properties: mpsc::Sender<serde_json::Value>,
     rx_reported_properties: mpsc::Receiver<serde_json::Value>,
+    tx_outgoing_message: mpsc::Sender<IotMessage>,
+    rx_outgoing_message: mpsc::Receiver<IotMessage>,
 }
 
 impl Twin {
     pub fn new(client: IotHubClient) -> Self {
         let (tx_reported_properties, rx_reported_properties) = mpsc::channel(100);
-        
+        let (tx_outgoing_message, rx_outgoing_message) = mpsc::channel(100);
         Twin {
             iothub_client: client,
             tx_reported_properties,
             rx_reported_properties,
+            tx_outgoing_message,
+            rx_outgoing_message,
             authenticated_once: false,
             location_once: false,
             metrics_provider: MetricsProvider::new(),
@@ -77,7 +81,10 @@ impl Twin {
 
             self.tx_reported_properties.send(location.clone()).await?;
 
-            self.metrics_provider.run(location["location"].clone());
+            self.metrics_provider.run(
+                self.tx_outgoing_message.clone(),
+                location["location"].clone(),
+            );
 
             self.location_once = true;
         };
@@ -92,6 +99,9 @@ impl Twin {
             IotHubClient::builder()
                 .observe_connection_state(tx_connection_status)
                 .observe_desired_properties(tx_twin_desired)
+                // .build_module_client(
+                //     &std::env::var("CONNECTION_STRING").context("connection string missing")?,
+                // )?,
                 .build_edge_client()?,
         );
 
@@ -108,6 +118,10 @@ impl Twin {
                 },
                 reported = twin.rx_reported_properties.recv() => {
                     twin.iothub_client.twin_report(reported.unwrap())?
+                },
+                Some(message) = twin.rx_outgoing_message.recv() => {
+                    twin.iothub_client
+                        .send_d2c_message(message)?
                 },
             );
         }

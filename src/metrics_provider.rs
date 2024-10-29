@@ -1,5 +1,3 @@
-use actix_web::{web, App, HttpServer, Responder};
-use actix_server::ServerHandle;
 use chrono::{Timelike, Utc};
 use futures_executor::block_on;
 use lazy_static::lazy_static;
@@ -7,10 +5,12 @@ use log::{error, info};
 use prometheus::{Gauge, IntGauge, Registry};
 use rand::distributions::Uniform;
 use rand::{thread_rng, Rng};
-use std::env;
-use std::net::{SocketAddr, ToSocketAddrs};
+use time::format_description::well_known::Rfc3339;
+use tokio::sync::mpsc::Sender;
 use tokio::task::JoinHandle;
 use tokio::time::Duration;
+
+use azure_iot_sdk::client::IotMessage;
 
 lazy_static! {
     static ref REGISTRY: Registry = Registry::new();
@@ -22,42 +22,13 @@ lazy_static! {
         Gauge::new("wind_speed", "wind speed").expect("wind_speed can be created");
     static ref WIND_DIRECTION: IntGauge =
         IntGauge::new("wind_direction", "wind direction").expect("wind_direction can be created");
-    static ref ADDR: SocketAddr = {
-        let def = SocketAddr::from(([0, 0, 0, 0], 8080));
-
-        let Some(addr) = env::var_os("BIND_ADDR_AND_PORT") else {
-            info!("use default address: {}", def.to_string());
-            return def;
-        };
-
-        let Ok(addr) = addr.into_string() else {
-            error!(
-                "cannot convert address string, use default address: {}",
-                def.to_string()
-            );
-            return def;
-        };
-
-        let Ok(mut addr) = addr.to_socket_addrs() else {
-            error!(
-                "cannot convert to socket address, use default address: {}",
-                def.to_string()
-            );
-            return def;
-        };
-
-        let Some(addr) = addr.next() else {
-            error!("iterator empty, use default address: {}", def.to_string());
-            return def;
-        };
-
-        addr
-    };
+    static ref IOTEDGE_DEVICEID: String = std::env::var("IOTEDGE_DEVICEID").unwrap();
+    static ref IOTEDGE_IOTHUBHOSTNAME: String = std::env::var("IOTEDGE_IOTHUBHOSTNAME").unwrap();
+    static ref IOTEDGE_MODULEID: String = std::env::var("IOTEDGE_MODULEID").unwrap();
 }
 
 #[derive(Default)]
 pub struct MetricsProvider {
-    srv: Option<ServerHandle>,
     sim: Option<JoinHandle<()>>,
 }
 
@@ -79,29 +50,15 @@ impl MetricsProvider {
         MetricsProvider::default()
     }
 
-    pub fn run(&mut self, location: serde_json::Value) {
-        let server =
-            HttpServer::new(|| App::new().route("/metrics", web::get().to(Self::metrics_handler)))
-                .workers(1)
-                .bind(*ADDR)
-                .unwrap()
-                .run();
-
-        self.srv = Some(server.handle());
-
-        tokio::spawn(server);
-
+    pub fn run(&mut self, tx_outgoing_message: Sender<IotMessage>, location: serde_json::Value) {
         self.sim = Some(tokio::spawn(MetricsProvider::data_collector(
+            tx_outgoing_message.clone(),
             location["latitude"].as_f64().unwrap(),
             location["longitude"].as_f64().unwrap(),
         )));
     }
 
     pub async fn stop(&mut self) {
-        if let Some(srv) = &self.srv {
-            srv.stop(false).await;
-        }
-
         if let Some(sim) = self.sim.as_mut() {
             sim.abort();
             sim.await.unwrap_or_else(|e| {
@@ -112,9 +69,13 @@ impl MetricsProvider {
         }
     }
 
-    async fn data_collector(latitude: f64, longitude: f64) {
+    async fn data_collector(
+        tx_outgoing_message: Sender<IotMessage>,
+        latitude: f64,
+        longitude: f64,
+    ) {
         // configure interval of wind speed and wind direction samples in seconds
-        let mut collect_interval = tokio::time::interval(Duration::from_secs(10));
+        let mut collect_interval = tokio::time::interval(Duration::from_secs(60));
 
         // init simulation ranges
         let wind_speed_range: Uniform<f64> = Uniform::new_inclusive(0.0, 10.0);
@@ -149,49 +110,66 @@ impl MetricsProvider {
                 _ => error!("couldn't generate wind direction"),
             }
 
+            let time_stamp = time::OffsetDateTime::now_utc().format(&Rfc3339).unwrap();
+
+            let msg = IotMessage::builder()
+                .set_body(
+                    serde_json::to_vec(&serde_json::json!(
+                            [
+                        {
+                            "TimeGeneratedUtc": time_stamp,
+                            "Name": "latitude",
+                            "Value": LATITUDE.get(),
+                            "Labels": {
+                                "edge_device": IOTEDGE_DEVICEID.to_string(),
+                                "iothub": IOTEDGE_IOTHUBHOSTNAME.to_string(),
+                                "module_name": IOTEDGE_MODULEID.to_string()
+                            }
+                        },
+                        {
+                            "TimeGeneratedUtc": time_stamp,
+                            "Name": "longitude",
+                            "Value": LONGITUDE.get(),
+                            "Labels": {
+                                "edge_device": IOTEDGE_DEVICEID.to_string(),
+                                "iothub": IOTEDGE_IOTHUBHOSTNAME.to_string(),
+                                "module_name": IOTEDGE_MODULEID.to_string()
+                            }
+                        },
+                        {
+                            "TimeGeneratedUtc": time_stamp,
+                            "Name": "wind_direction",
+                            "Value": WIND_DIRECTION.get(),
+                            "Labels": {
+                                "edge_device": IOTEDGE_DEVICEID.to_string(),
+                                "iothub": IOTEDGE_IOTHUBHOSTNAME.to_string(),
+                                "module_name": IOTEDGE_MODULEID.to_string()
+                            }
+                        },
+                        {
+                            "TimeGeneratedUtc": time_stamp,
+                            "Name": "wind_speed",
+                            "Value": WIND_SPEED.get(),
+                            "Labels": {
+                                "edge_device": IOTEDGE_DEVICEID.to_string(),
+                                "iothub": IOTEDGE_IOTHUBHOSTNAME.to_string(),
+                                "module_name": IOTEDGE_MODULEID.to_string()
+                            }
+                        }
+                            ]
+
+                    ))
+                    .unwrap(),
+                )
+                .set_content_type("application/json")
+                .set_content_encoding("utf-8")
+                .set_output_queue("metrics")
+                .build()
+                .unwrap();
+            let _ = tx_outgoing_message.send(msg).await;
+
             collect_interval.tick().await;
         }
-    }
-
-    async fn metrics_handler() -> impl Responder {
-        use prometheus::Encoder;
-
-        let encoder = prometheus::TextEncoder::new();
-        let mut buffer = Vec::new();
-
-        if let Err(e) = encoder.encode(&REGISTRY.gather(), &mut buffer) {
-            error!("could not encode custom metrics: {}", e);
-        };
-
-        let mut res = match String::from_utf8(buffer.clone()) {
-            Ok(v) => v,
-            Err(e) => {
-                error!("custom metrics could not be from_utf8'd: {}", e);
-                String::default()
-            }
-        };
-
-        buffer.clear();
-
-        let mut buffer = Vec::new();
-
-        if let Err(e) = encoder.encode(&prometheus::gather(), &mut buffer) {
-            error!("could not encode prometheus metrics: {}", e);
-        };
-
-        let res_custom = match String::from_utf8(buffer.clone()) {
-            Ok(v) => v,
-            Err(e) => {
-                error!("prometheus metrics could not be from_utf8'd: {}", e);
-                String::default()
-            }
-        };
-
-        buffer.clear();
-
-        res.push_str(&res_custom);
-
-        res
     }
 }
 
