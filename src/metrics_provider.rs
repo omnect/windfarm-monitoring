@@ -2,7 +2,6 @@ use chrono::{Timelike, Utc};
 use futures_executor::block_on;
 use lazy_static::lazy_static;
 use log::{error, info};
-use prometheus::{Gauge, IntGauge, Registry};
 use rand::distributions::Uniform;
 use rand::{thread_rng, Rng};
 use time::format_description::well_known::Rfc3339;
@@ -13,15 +12,6 @@ use tokio::time::Duration;
 use azure_iot_sdk::client::IotMessage;
 
 lazy_static! {
-    static ref REGISTRY: Registry = Registry::new();
-    static ref LATITUDE: Gauge =
-        Gauge::new("latitude", "latitude").expect("latitude can be created");
-    static ref LONGITUDE: Gauge =
-        Gauge::new("longitude", "longitude").expect("longitude can be created");
-    static ref WIND_SPEED: Gauge =
-        Gauge::new("wind_speed", "wind speed").expect("wind_speed can be created");
-    static ref WIND_DIRECTION: IntGauge =
-        IntGauge::new("wind_direction", "wind direction").expect("wind_direction can be created");
     static ref IOTEDGE_DEVICEID: String = std::env::var("IOTEDGE_DEVICEID").unwrap();
     static ref IOTEDGE_IOTHUBHOSTNAME: String = std::env::var("IOTEDGE_IOTHUBHOSTNAME").unwrap();
     static ref IOTEDGE_MODULEID: String = std::env::var("IOTEDGE_MODULEID").unwrap();
@@ -34,19 +24,6 @@ pub struct MetricsProvider {
 
 impl MetricsProvider {
     pub fn new() -> Self {
-        REGISTRY
-            .register(Box::new(LATITUDE.clone()))
-            .expect("LATITUDE can be registered");
-        REGISTRY
-            .register(Box::new(LONGITUDE.clone()))
-            .expect("LONGITUDE can be registered");
-        REGISTRY
-            .register(Box::new(WIND_SPEED.clone()))
-            .expect("WIND_SPEED can be registered");
-        REGISTRY
-            .register(Box::new(WIND_DIRECTION.clone()))
-            .expect("WIND_DIRECTION can be registered");
-
         MetricsProvider::default()
     }
 
@@ -89,24 +66,25 @@ impl MetricsProvider {
             .take(24)
             .collect();
 
-        // set location
-        info!("set LATITUDE: {} LONGITUDE: {}", latitude, longitude);
-        LATITUDE.set(latitude);
-        LONGITUDE.set(longitude);
+        info!("LATITUDE: {} LONGITUDE: {}", latitude, longitude);
 
         loop {
+            let mut wind_speed: f64 = 0.0;
+            let mut wind_direction: i64 = 0;
             // get wind speed of current hour
             // apply random deviation of -5.0 to 5.0 percent
             match wind_speed_per_hour.get(Utc::now().hour() as usize) {
-                Some(v) => WIND_SPEED.set(v + (v * thread_rng().gen_range(-5.0..5.0) / 100.0)),
+                Some(v) => wind_speed = v + (v * thread_rng().gen_range(-5.0..5.0) / 100.0),
                 _ => error!("couldn't generate wind speed"),
             }
 
             // get wind direction of current hour
             // apply random deviation of -5.0 to 5.0 percent
             match wind_direction_per_hour.get(Utc::now().hour() as usize) {
-                Some(v) => WIND_DIRECTION
-                    .set(v + (*v as f64 * thread_rng().gen_range(-5.0..5.0) / 100.0) as i64),
+                Some(v) => {
+                    wind_direction =
+                        v + (*v as f64 * thread_rng().gen_range(-5.0..5.0) / 100.0) as i64
+                }
                 _ => error!("couldn't generate wind direction"),
             }
 
@@ -119,7 +97,7 @@ impl MetricsProvider {
                         {
                             "TimeGeneratedUtc": time_stamp,
                             "Name": "latitude",
-                            "Value": LATITUDE.get(),
+                            "Value": latitude,
                             "Labels": {
                                 "edge_device": IOTEDGE_DEVICEID.to_string(),
                                 "iothub": IOTEDGE_IOTHUBHOSTNAME.to_string(),
@@ -129,7 +107,7 @@ impl MetricsProvider {
                         {
                             "TimeGeneratedUtc": time_stamp,
                             "Name": "longitude",
-                            "Value": LONGITUDE.get(),
+                            "Value": longitude,
                             "Labels": {
                                 "edge_device": IOTEDGE_DEVICEID.to_string(),
                                 "iothub": IOTEDGE_IOTHUBHOSTNAME.to_string(),
@@ -139,7 +117,7 @@ impl MetricsProvider {
                         {
                             "TimeGeneratedUtc": time_stamp,
                             "Name": "wind_direction",
-                            "Value": WIND_DIRECTION.get(),
+                            "Value": wind_direction,
                             "Labels": {
                                 "edge_device": IOTEDGE_DEVICEID.to_string(),
                                 "iothub": IOTEDGE_IOTHUBHOSTNAME.to_string(),
@@ -149,7 +127,7 @@ impl MetricsProvider {
                         {
                             "TimeGeneratedUtc": time_stamp,
                             "Name": "wind_speed",
-                            "Value": WIND_SPEED.get(),
+                            "Value": wind_speed,
                             "Labels": {
                                 "edge_device": IOTEDGE_DEVICEID.to_string(),
                                 "iothub": IOTEDGE_IOTHUBHOSTNAME.to_string(),
