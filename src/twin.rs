@@ -1,5 +1,5 @@
 use crate::metrics_provider::MetricsProvider;
-use anyhow::{Context, Result};
+use anyhow::Result;
 use azure_iot_sdk::client::*;
 use log::{error, info};
 use rand::{thread_rng, Rng};
@@ -99,9 +99,6 @@ impl Twin {
             IotHubClient::builder()
                 .observe_connection_state(tx_connection_status)
                 .observe_desired_properties(tx_twin_desired)
-                // .build_module_client(
-                //     &std::env::var("CONNECTION_STRING").context("connection string missing")?,
-                // )?,
                 .build_edge_client()?,
         );
 
