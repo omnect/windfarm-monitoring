@@ -2,14 +2,13 @@
 Product page: https://www.omnect.io/home
 
 # What is windfarm-monitoring
-This module is designed to **demonstrate windfarm signal values** and provides the following metrics via an D2C(device-to-cloud) message:
+This module is designed to **demonstrate windfarm metrics** and provides the following metrics via an D2C(device-to-cloud) message:
 
 - latitude
 - longitude
 - wind_speed
 - wind_direction
-
-The device-to-cloud message will be transmitted to edgeHub module on an **edge device** and must be manual routed to the IotHub with the following deployment route:
+The device-to-cloud messages must be manually routed to IotHub. Therefore a route must be defined in deployment:
 **FROM /messages/modules/windfarm-monitoring/outputs/metrics INTO $upstream**
 
 The message protocol used is as follows:

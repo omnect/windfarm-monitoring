@@ -12,9 +12,9 @@ use tokio::time::Duration;
 use azure_iot_sdk::client::IotMessage;
 
 lazy_static! {
-    static ref IOTEDGE_DEVICEID: String = std::env::var("IOTEDGE_DEVICEID").unwrap();
-    static ref IOTEDGE_IOTHUBHOSTNAME: String = std::env::var("IOTEDGE_IOTHUBHOSTNAME").unwrap();
-    static ref IOTEDGE_MODULEID: String = std::env::var("IOTEDGE_MODULEID").unwrap();
+    static ref DEVICE_ID: String = std::env::var("IOTEDGE_DEVICEID").unwrap();
+    static ref IOTHUB: String = std::env::var("IOTEDGE_IOTHUBHOSTNAME").unwrap();
+    static ref MODULE_ID: String = std::env::var("IOTEDGE_MODULEID").unwrap();
 }
 
 #[derive(Default)]
@@ -66,7 +66,7 @@ impl MetricsProvider {
             .take(24)
             .collect();
 
-        info!("LATITUDE: {} LONGITUDE: {}", latitude, longitude);
+        info!("LATITUDE: {latitude} LONGITUDE: {longitude}");
 
         loop {
             let mut wind_speed: f64 = 0.0;
@@ -99,9 +99,9 @@ impl MetricsProvider {
                             "Name": "latitude",
                             "Value": latitude,
                             "Labels": {
-                                "edge_device": IOTEDGE_DEVICEID.to_string(),
-                                "iothub": IOTEDGE_IOTHUBHOSTNAME.to_string(),
-                                "module_name": IOTEDGE_MODULEID.to_string()
+                                "edge_device": DEVICE_ID.to_string(),
+                                "iothub": IOTHUB.to_string(),
+                                "module_name": MODULE_ID.to_string()
                             }
                         },
                         {
@@ -109,9 +109,9 @@ impl MetricsProvider {
                             "Name": "longitude",
                             "Value": longitude,
                             "Labels": {
-                                "edge_device": IOTEDGE_DEVICEID.to_string(),
-                                "iothub": IOTEDGE_IOTHUBHOSTNAME.to_string(),
-                                "module_name": IOTEDGE_MODULEID.to_string()
+                                "edge_device": DEVICE_ID.to_string(),
+                                "iothub": IOTHUB.to_string(),
+                                "module_name": MODULE_ID.to_string()
                             }
                         },
                         {
@@ -119,9 +119,9 @@ impl MetricsProvider {
                             "Name": "wind_direction",
                             "Value": wind_direction,
                             "Labels": {
-                                "edge_device": IOTEDGE_DEVICEID.to_string(),
-                                "iothub": IOTEDGE_IOTHUBHOSTNAME.to_string(),
-                                "module_name": IOTEDGE_MODULEID.to_string()
+                                "edge_device": DEVICE_ID.to_string(),
+                                "iothub": IOTHUB.to_string(),
+                                "module_name": MODULE_ID.to_string()
                             }
                         },
                         {
@@ -129,9 +129,9 @@ impl MetricsProvider {
                             "Name": "wind_speed",
                             "Value": wind_speed,
                             "Labels": {
-                                "edge_device": IOTEDGE_DEVICEID.to_string(),
-                                "iothub": IOTEDGE_IOTHUBHOSTNAME.to_string(),
-                                "module_name": IOTEDGE_MODULEID.to_string()
+                                "edge_device": DEVICE_ID.to_string(),
+                                "iothub": IOTHUB.to_string(),
+                                "module_name": MODULE_ID.to_string()
                             }
                         }
                             ]
