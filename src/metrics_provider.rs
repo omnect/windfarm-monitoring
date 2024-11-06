@@ -10,11 +10,46 @@ use tokio::task::JoinHandle;
 use tokio::time::Duration;
 
 use azure_iot_sdk::client::IotMessage;
+use serde::Serialize;
 
 lazy_static! {
     static ref DEVICE_ID: String = std::env::var("IOTEDGE_DEVICEID").unwrap();
     static ref IOTHUB: String = std::env::var("IOTEDGE_IOTHUBHOSTNAME").unwrap();
     static ref MODULE_ID: String = std::env::var("IOTEDGE_MODULEID").unwrap();
+}
+
+#[derive(Serialize)]
+struct Label {
+    edge_device: String,
+    iothub: String,
+    module_name: String,
+}
+
+#[derive(Serialize)]
+struct Metric {
+    #[serde(rename = "TimeGeneratedUtc")]
+    time_generated_utc: String,
+    #[serde(rename = "Name")]
+    name: String,
+    #[serde(rename = "Value")]
+    value: f64,
+    #[serde(rename = "Labels")]
+    labels: Label,
+}
+
+impl Metric {
+    fn new(name: &str, value: f64) -> Metric {
+        Metric {
+            time_generated_utc: time::OffsetDateTime::now_utc().format(&Rfc3339).unwrap(),
+            name: name.to_string(),
+            value,
+            labels: Label {
+                edge_device: DEVICE_ID.to_string(),
+                iothub: IOTHUB.to_string(),
+                module_name: MODULE_ID.to_string(),
+            },
+        }
+    }
 }
 
 #[derive(Default)]
@@ -88,57 +123,15 @@ impl MetricsProvider {
                 _ => error!("couldn't generate wind direction"),
             }
 
-            let time_stamp = time::OffsetDateTime::now_utc().format(&Rfc3339).unwrap();
+            let metric1 = Metric::new("latitude", latitude);
+            let metric2 = Metric::new("longitude", longitude);
+            let metric3 = Metric::new("wind_speed", wind_speed);
+            let metric4 = Metric::new("wind_direction", wind_direction as f64);
+
+            let metric_list = vec![metric1, metric2, metric3, metric4];
 
             let msg = IotMessage::builder()
-                .set_body(
-                    serde_json::to_vec(&serde_json::json!(
-                            [
-                        {
-                            "TimeGeneratedUtc": time_stamp,
-                            "Name": "latitude",
-                            "Value": latitude,
-                            "Labels": {
-                                "edge_device": DEVICE_ID.to_string(),
-                                "iothub": IOTHUB.to_string(),
-                                "module_name": MODULE_ID.to_string()
-                            }
-                        },
-                        {
-                            "TimeGeneratedUtc": time_stamp,
-                            "Name": "longitude",
-                            "Value": longitude,
-                            "Labels": {
-                                "edge_device": DEVICE_ID.to_string(),
-                                "iothub": IOTHUB.to_string(),
-                                "module_name": MODULE_ID.to_string()
-                            }
-                        },
-                        {
-                            "TimeGeneratedUtc": time_stamp,
-                            "Name": "wind_direction",
-                            "Value": wind_direction,
-                            "Labels": {
-                                "edge_device": DEVICE_ID.to_string(),
-                                "iothub": IOTHUB.to_string(),
-                                "module_name": MODULE_ID.to_string()
-                            }
-                        },
-                        {
-                            "TimeGeneratedUtc": time_stamp,
-                            "Name": "wind_speed",
-                            "Value": wind_speed,
-                            "Labels": {
-                                "edge_device": DEVICE_ID.to_string(),
-                                "iothub": IOTHUB.to_string(),
-                                "module_name": MODULE_ID.to_string()
-                            }
-                        }
-                            ]
-
-                    ))
-                    .unwrap(),
-                )
+                .set_body(serde_json::to_vec(&metric_list).unwrap())
                 .set_content_type("application/json")
                 .set_content_encoding("utf-8")
                 .set_output_queue("metrics")
