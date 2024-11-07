@@ -104,6 +104,8 @@ impl MetricsProvider {
         info!("LATITUDE: {latitude} LONGITUDE: {longitude}");
 
         loop {
+            collect_interval.tick().await;
+
             let mut wind_speed: f64 = 0.0;
             let mut wind_direction: i64 = 0;
             // get wind speed of current hour
@@ -123,23 +125,30 @@ impl MetricsProvider {
                 _ => error!("couldn't generate wind direction"),
             }
 
-            let metric1 = Metric::new("latitude", latitude);
-            let metric2 = Metric::new("longitude", longitude);
-            let metric3 = Metric::new("wind_speed", wind_speed);
-            let metric4 = Metric::new("wind_direction", wind_direction as f64);
+            let metric_list = vec![
+                Metric::new("latitude", latitude),
+                Metric::new("longitude", longitude),
+                Metric::new("wind_speed", wind_speed),
+                Metric::new("wind_direction", wind_direction as f64),
+            ];
 
-            let metric_list = vec![metric1, metric2, metric3, metric4];
-
-            let msg = IotMessage::builder()
-                .set_body(serde_json::to_vec(&metric_list).unwrap())
-                .set_content_type("application/json")
-                .set_content_encoding("utf-8")
-                .set_output_queue("metrics")
-                .build()
-                .unwrap();
-            let _ = tx_outgoing_message.send(msg).await;
-
-            collect_interval.tick().await;
+            match serde_json::to_vec(&metric_list) {
+                Ok(json) => {
+                    match IotMessage::builder()
+                        .set_body(json)
+                        .set_content_type("application/json")
+                        .set_content_encoding("utf-8")
+                        .set_output_queue("metrics")
+                        .build()
+                    {
+                        Ok(msg) => {
+                            let _ = tx_outgoing_message.send(msg).await;
+                        }
+                        _ => error!("telemetry message could not be transmitted"),
+                    }
+                }
+                _ => error!("metrics list could not be converted to vector"),
+            }
         }
     }
 }
