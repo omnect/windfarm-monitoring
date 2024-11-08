@@ -1,107 +1,76 @@
-use actix_web::{web, App, HttpServer, Responder};
-use actix_server::ServerHandle;
 use chrono::{Timelike, Utc};
 use futures_executor::block_on;
 use lazy_static::lazy_static;
 use log::{error, info};
-use prometheus::{Gauge, IntGauge, Registry};
 use rand::distributions::Uniform;
 use rand::{thread_rng, Rng};
-use std::env;
-use std::net::{SocketAddr, ToSocketAddrs};
+use time::format_description::well_known::Rfc3339;
+use tokio::sync::mpsc::Sender;
 use tokio::task::JoinHandle;
 use tokio::time::Duration;
 
+use azure_iot_sdk::client::IotMessage;
+use serde::Serialize;
+
 lazy_static! {
-    static ref REGISTRY: Registry = Registry::new();
-    static ref LATITUDE: Gauge =
-        Gauge::new("latitude", "latitude").expect("latitude can be created");
-    static ref LONGITUDE: Gauge =
-        Gauge::new("longitude", "longitude").expect("longitude can be created");
-    static ref WIND_SPEED: Gauge =
-        Gauge::new("wind_speed", "wind speed").expect("wind_speed can be created");
-    static ref WIND_DIRECTION: IntGauge =
-        IntGauge::new("wind_direction", "wind direction").expect("wind_direction can be created");
-    static ref ADDR: SocketAddr = {
-        let def = SocketAddr::from(([0, 0, 0, 0], 8080));
+    static ref DEVICE_ID: String = std::env::var("IOTEDGE_DEVICEID").unwrap();
+    static ref IOTHUB: String = std::env::var("IOTEDGE_IOTHUBHOSTNAME").unwrap();
+    static ref MODULE_ID: String = std::env::var("IOTEDGE_MODULEID").unwrap();
+}
 
-        let Some(addr) = env::var_os("BIND_ADDR_AND_PORT") else {
-            info!("use default address: {}", def.to_string());
-            return def;
-        };
+#[derive(Serialize)]
+struct Label {
+    edge_device: String,
+    iothub: String,
+    module_name: String,
+}
 
-        let Ok(addr) = addr.into_string() else {
-            error!(
-                "cannot convert address string, use default address: {}",
-                def.to_string()
-            );
-            return def;
-        };
+#[derive(Serialize)]
+struct Metric {
+    #[serde(rename = "TimeGeneratedUtc")]
+    time_generated_utc: String,
+    #[serde(rename = "Name")]
+    name: String,
+    #[serde(rename = "Value")]
+    value: f64,
+    #[serde(rename = "Labels")]
+    labels: Label,
+}
 
-        let Ok(mut addr) = addr.to_socket_addrs() else {
-            error!(
-                "cannot convert to socket address, use default address: {}",
-                def.to_string()
-            );
-            return def;
-        };
-
-        let Some(addr) = addr.next() else {
-            error!("iterator empty, use default address: {}", def.to_string());
-            return def;
-        };
-
-        addr
-    };
+impl Metric {
+    fn new(name: &str, value: f64) -> Metric {
+        Metric {
+            time_generated_utc: time::OffsetDateTime::now_utc().format(&Rfc3339).unwrap(),
+            name: name.to_string(),
+            value,
+            labels: Label {
+                edge_device: DEVICE_ID.to_string(),
+                iothub: IOTHUB.to_string(),
+                module_name: MODULE_ID.to_string(),
+            },
+        }
+    }
 }
 
 #[derive(Default)]
 pub struct MetricsProvider {
-    srv: Option<ServerHandle>,
     sim: Option<JoinHandle<()>>,
 }
 
 impl MetricsProvider {
     pub fn new() -> Self {
-        REGISTRY
-            .register(Box::new(LATITUDE.clone()))
-            .expect("LATITUDE can be registered");
-        REGISTRY
-            .register(Box::new(LONGITUDE.clone()))
-            .expect("LONGITUDE can be registered");
-        REGISTRY
-            .register(Box::new(WIND_SPEED.clone()))
-            .expect("WIND_SPEED can be registered");
-        REGISTRY
-            .register(Box::new(WIND_DIRECTION.clone()))
-            .expect("WIND_DIRECTION can be registered");
-
         MetricsProvider::default()
     }
 
-    pub fn run(&mut self, location: serde_json::Value) {
-        let server =
-            HttpServer::new(|| App::new().route("/metrics", web::get().to(Self::metrics_handler)))
-                .workers(1)
-                .bind(*ADDR)
-                .unwrap()
-                .run();
-
-        self.srv = Some(server.handle());
-
-        tokio::spawn(server);
-
+    pub fn run(&mut self, tx_outgoing_message: Sender<IotMessage>, location: serde_json::Value) {
         self.sim = Some(tokio::spawn(MetricsProvider::data_collector(
+            tx_outgoing_message.clone(),
             location["latitude"].as_f64().unwrap(),
             location["longitude"].as_f64().unwrap(),
         )));
     }
 
     pub async fn stop(&mut self) {
-        if let Some(srv) = &self.srv {
-            srv.stop(false).await;
-        }
-
         if let Some(sim) = self.sim.as_mut() {
             sim.abort();
             sim.await.unwrap_or_else(|e| {
@@ -112,9 +81,13 @@ impl MetricsProvider {
         }
     }
 
-    async fn data_collector(latitude: f64, longitude: f64) {
+    async fn data_collector(
+        tx_outgoing_message: Sender<IotMessage>,
+        latitude: f64,
+        longitude: f64,
+    ) {
         // configure interval of wind speed and wind direction samples in seconds
-        let mut collect_interval = tokio::time::interval(Duration::from_secs(10));
+        let mut collect_interval = tokio::time::interval(Duration::from_secs(60));
 
         // init simulation ranges
         let wind_speed_range: Uniform<f64> = Uniform::new_inclusive(0.0, 10.0);
@@ -128,70 +101,55 @@ impl MetricsProvider {
             .take(24)
             .collect();
 
-        // set location
-        info!("set LATITUDE: {} LONGITUDE: {}", latitude, longitude);
-        LATITUDE.set(latitude);
-        LONGITUDE.set(longitude);
+        info!("LATITUDE: {latitude} LONGITUDE: {longitude}");
 
         loop {
+            collect_interval.tick().await;
+
+            let mut wind_speed: f64 = 0.0;
+            let mut wind_direction: i64 = 0;
             // get wind speed of current hour
             // apply random deviation of -5.0 to 5.0 percent
             match wind_speed_per_hour.get(Utc::now().hour() as usize) {
-                Some(v) => WIND_SPEED.set(v + (v * thread_rng().gen_range(-5.0..5.0) / 100.0)),
+                Some(v) => wind_speed = v + (v * thread_rng().gen_range(-5.0..5.0) / 100.0),
                 _ => error!("couldn't generate wind speed"),
             }
 
             // get wind direction of current hour
             // apply random deviation of -5.0 to 5.0 percent
             match wind_direction_per_hour.get(Utc::now().hour() as usize) {
-                Some(v) => WIND_DIRECTION
-                    .set(v + (*v as f64 * thread_rng().gen_range(-5.0..5.0) / 100.0) as i64),
+                Some(v) => {
+                    wind_direction =
+                        v + (*v as f64 * thread_rng().gen_range(-5.0..5.0) / 100.0) as i64
+                }
                 _ => error!("couldn't generate wind direction"),
             }
 
-            collect_interval.tick().await;
+            let metric_list = vec![
+                Metric::new("latitude", latitude),
+                Metric::new("longitude", longitude),
+                Metric::new("wind_speed", wind_speed),
+                Metric::new("wind_direction", wind_direction as f64),
+            ];
+
+            match serde_json::to_vec(&metric_list) {
+                Ok(json) => {
+                    match IotMessage::builder()
+                        .set_body(json)
+                        .set_content_type("application/json")
+                        .set_content_encoding("utf-8")
+                        .set_output_queue("metrics")
+                        .build()
+                    {
+                        Ok(msg) => {
+                            let _ = tx_outgoing_message.send(msg).await;
+                        }
+                        Err(e) => error!("telemetry message could not be transmitted: {e}"),
+                    }
+                }
+                Err(e) => error!("metrics list could not be converted to vector: {e}"),
+            }
         }
-    }
-
-    async fn metrics_handler() -> impl Responder {
-        use prometheus::Encoder;
-
-        let encoder = prometheus::TextEncoder::new();
-        let mut buffer = Vec::new();
-
-        if let Err(e) = encoder.encode(&REGISTRY.gather(), &mut buffer) {
-            error!("could not encode custom metrics: {}", e);
-        };
-
-        let mut res = match String::from_utf8(buffer.clone()) {
-            Ok(v) => v,
-            Err(e) => {
-                error!("custom metrics could not be from_utf8'd: {}", e);
-                String::default()
-            }
-        };
-
-        buffer.clear();
-
-        let mut buffer = Vec::new();
-
-        if let Err(e) = encoder.encode(&prometheus::gather(), &mut buffer) {
-            error!("could not encode prometheus metrics: {}", e);
-        };
-
-        let res_custom = match String::from_utf8(buffer.clone()) {
-            Ok(v) => v,
-            Err(e) => {
-                error!("prometheus metrics could not be from_utf8'd: {}", e);
-                String::default()
-            }
-        };
-
-        buffer.clear();
-
-        res.push_str(&res_custom);
-
-        res
     }
 }
 
