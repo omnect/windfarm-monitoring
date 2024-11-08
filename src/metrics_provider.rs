@@ -144,10 +144,10 @@ impl MetricsProvider {
                         Ok(msg) => {
                             let _ = tx_outgoing_message.send(msg).await;
                         }
-                        _ => error!("telemetry message could not be transmitted"),
+                        Err(e) => error!("telemetry message could not be transmitted: {e}"),
                     }
                 }
-                _ => error!("metrics list could not be converted to vector"),
+                Err(e) => error!("metrics list could not be converted to vector: {e}"),
             }
         }
     }
