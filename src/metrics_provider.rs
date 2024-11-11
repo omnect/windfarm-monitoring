@@ -38,9 +38,9 @@ struct Metric {
 }
 
 impl Metric {
-    fn new(name: &str, value: f64) -> Metric {
+    fn new(time: String, name: &str, value: f64) -> Metric {
         Metric {
-            time_generated_utc: time::OffsetDateTime::now_utc().format(&Rfc3339).unwrap(),
+            time_generated_utc: time,
             name: name.to_string(),
             value,
             labels: Label {
@@ -125,11 +125,19 @@ impl MetricsProvider {
                 _ => error!("couldn't generate wind direction"),
             }
 
+            let time = match time::OffsetDateTime::now_utc().format(&Rfc3339) {
+                Ok(time) => time,
+                Err(e) => {
+                    error!("timestamp could not be generated: {e}");
+                    String::from("")
+                }
+            };
+
             let metric_list = vec![
-                Metric::new("latitude", latitude),
-                Metric::new("longitude", longitude),
-                Metric::new("wind_speed", wind_speed),
-                Metric::new("wind_direction", wind_direction as f64),
+                Metric::new(time.clone(), "latitude", latitude),
+                Metric::new(time.clone(), "longitude", longitude),
+                Metric::new(time.clone(), "wind_speed", wind_speed),
+                Metric::new(time.clone(), "wind_direction", wind_direction as f64),
             ];
 
             match serde_json::to_vec(&metric_list) {
