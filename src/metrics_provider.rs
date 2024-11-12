@@ -129,7 +129,7 @@ impl MetricsProvider {
                 Ok(time) => time,
                 Err(e) => {
                     error!("timestamp could not be generated: {e}");
-                    String::from("")
+                    continue;
                 }
             };
 
