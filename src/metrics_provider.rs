@@ -3,7 +3,7 @@ use futures_executor::block_on;
 use lazy_static::lazy_static;
 use log::{error, info};
 use rand::distributions::Uniform;
-use rand::{thread_rng, Rng};
+use rand::{Rng, thread_rng};
 use time::format_description::well_known::Rfc3339;
 use tokio::sync::mpsc::Sender;
 use tokio::task::JoinHandle;
@@ -75,7 +75,7 @@ impl MetricsProvider {
             sim.abort();
             sim.await.unwrap_or_else(|e| {
                 if !e.is_cancelled() {
-                    error!("thread terminated with error: {}", e.to_string());
+                    error!("thread terminated with error: {e}");
                 }
             });
         }
