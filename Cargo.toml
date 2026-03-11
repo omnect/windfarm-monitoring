@@ -7,7 +7,15 @@ license = "MIT OR Apache-2.0"
 name = "windfarm-monitoring"
 readme = "README.md"
 repository = "git@github.com:omnect/windfarm-monitoring.git"
-version = "0.4.3"
+version = "0.4.4"
+
+[profile.dist]
+inherits = "release"
+opt-level = "z"     # Optimize for minimum binary size
+lto = "fat"         # Enable aggressive Fat LTO for production builds
+codegen-units = 1   # Maximize optimization for production
+strip = true        # Strip debug symbols
+panic = "abort"     # Remove unwinding code to further reduce size
 
 [dependencies]
 anyhow = { version = "1.0", default-features = false }
@@ -22,9 +30,9 @@ futures-executor = { version = "0.3", default-features = false, features = [
 lazy_static = { version = "1.5", default-features = false }
 log = { version = "0.4", default-features = false }
 log-panics = { version = "2", default-features = false }
-rand = { version = "0.8", default-features = false, features = [
+rand = { version = "0.9", default-features = false, features = [
     "std",
-    "std_rng",
+    "thread_rng",
 ] }
 serde = { version = "1.0", default-features = false, features = ["derive"] }
 serde_json = { version = "1.0", default-features = false }

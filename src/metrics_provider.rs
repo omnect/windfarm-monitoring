@@ -2,8 +2,8 @@ use chrono::{Timelike, Utc};
 use futures_executor::block_on;
 use lazy_static::lazy_static;
 use log::{error, info};
-use rand::distributions::Uniform;
-use rand::{Rng, thread_rng};
+use rand::Rng;
+use rand::distr::Uniform;
 use time::format_description::well_known::Rfc3339;
 use tokio::sync::mpsc::Sender;
 use tokio::task::JoinHandle;
@@ -90,13 +90,11 @@ impl MetricsProvider {
         let mut collect_interval = tokio::time::interval(Duration::from_secs(60));
 
         // init simulation ranges
-        let wind_speed_range: Uniform<f64> = Uniform::new_inclusive(0.0, 10.0);
-        let wind_direction_range: Uniform<i64> = Uniform::new_inclusive(0, 359);
-        let wind_speed_per_hour: Vec<f64> = thread_rng()
-            .sample_iter(wind_speed_range)
-            .take(24)
-            .collect();
-        let wind_direction_per_hour: Vec<i64> = thread_rng()
+        let wind_speed_range: Uniform<f64> = Uniform::new_inclusive(0.0, 10.0).unwrap();
+        let wind_direction_range: Uniform<i64> = Uniform::new_inclusive(0, 359).unwrap();
+        let wind_speed_per_hour: Vec<f64> =
+            rand::rng().sample_iter(wind_speed_range).take(24).collect();
+        let wind_direction_per_hour: Vec<i64> = rand::rng()
             .sample_iter(wind_direction_range)
             .take(24)
             .collect();
@@ -111,7 +109,7 @@ impl MetricsProvider {
             // get wind speed of current hour
             // apply random deviation of -5.0 to 5.0 percent
             match wind_speed_per_hour.get(Utc::now().hour() as usize) {
-                Some(v) => wind_speed = v + (v * thread_rng().gen_range(-5.0..5.0) / 100.0),
+                Some(v) => wind_speed = v + (v * rand::rng().random_range(-5.0..5.0) / 100.0),
                 _ => error!("couldn't generate wind speed"),
             }
 
@@ -120,7 +118,7 @@ impl MetricsProvider {
             match wind_direction_per_hour.get(Utc::now().hour() as usize) {
                 Some(v) => {
                     wind_direction =
-                        v + (*v as f64 * thread_rng().gen_range(-5.0..5.0) / 100.0) as i64
+                        v + (*v as f64 * rand::rng().random_range(-5.0..5.0) / 100.0) as i64
                 }
                 _ => error!("couldn't generate wind direction"),
             }
