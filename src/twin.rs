@@ -2,7 +2,7 @@ use crate::metrics_provider::MetricsProvider;
 use anyhow::Result;
 use azure_iot_sdk::client::*;
 use log::{error, info, warn};
-use rand::Rng;
+use rand::RngExt;
 use serde_json::json;
 use std::time::{self, Duration};
 use tokio::{select, sync::mpsc};

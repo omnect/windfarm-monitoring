@@ -2,7 +2,7 @@ use chrono::{Timelike, Utc};
 use futures_executor::block_on;
 use lazy_static::lazy_static;
 use log::{error, info};
-use rand::Rng;
+use rand::RngExt;
 use rand::distr::Uniform;
 use time::format_description::well_known::Rfc3339;
 use tokio::sync::mpsc::Sender;

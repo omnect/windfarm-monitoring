@@ -7,7 +7,7 @@ license = "MIT OR Apache-2.0"
 name = "windfarm-monitoring"
 readme = "README.md"
 repository = "git@github.com:omnect/windfarm-monitoring.git"
-version = "0.4.4"
+version = "0.4.5"
 
 [profile.dist]
 inherits = "release"
@@ -19,7 +19,7 @@ panic = "abort"     # Remove unwinding code to further reduce size
 
 [dependencies]
 anyhow = { version = "1.0", default-features = false }
-azure-iot-sdk = { git = "https://github.com/omnect/azure-iot-sdk.git", tag = "0.14.1", default-features = false, features = [
+azure-iot-sdk = { git = "https://github.com/omnect/azure-iot-sdk.git", tag = "0.14.2", default-features = false, features = [
     "edge_client",
 ] }
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
@@ -30,7 +30,7 @@ futures-executor = { version = "0.3", default-features = false, features = [
 lazy_static = { version = "1.5", default-features = false }
 log = { version = "0.4", default-features = false }
 log-panics = { version = "2", default-features = false }
-rand = { version = "0.9", default-features = false, features = [
+rand = { version = "0.10", default-features = false, features = [
     "std",
     "thread_rng",
 ] }

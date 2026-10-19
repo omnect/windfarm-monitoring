@@ -1,10 +1,10 @@
 ARG DOCKER_NAMESPACE=omnectweucopsacr.azurecr.io
-ARG BUILD_IMAGE=${DOCKER_NAMESPACE}/rust:bookworm
-ARG DISTROLESS_IMAGE=gcr.io/distroless/base-debian12:nonroot
+ARG BUILD_IMAGE=${DOCKER_NAMESPACE}/rust:trixie
+ARG DISTROLESS_IMAGE=gcr.io/distroless/base-debian13:nonroot
 
 FROM ${DISTROLESS_IMAGE} AS distroless
 
-FROM ${DOCKER_NAMESPACE}/rust:bookworm AS builder
+FROM ${BUILD_IMAGE} AS builder
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -30,7 +30,7 @@ SHELL ["/bin/bash", "-c"]
 RUN <<EOT
     set -eu
 
-    mkdir -p /copy/status.d
+    mkdir -p /copy/status.d /copy/usr/lib
 
     executable=(windfarm-monitoring-bin)
 
@@ -71,7 +71,6 @@ EOT
 
 FROM ${DISTROLESS_IMAGE} AS base
 COPY --from=builder /work/windfarm-monitoring-bin /windfarm-monitoring
-COPY --from=builder /copy/lib/ /lib/
 COPY --from=builder /copy/usr/ /usr/
 COPY --from=builder /copy/status.d /var/lib/dpkg/status.d
 
