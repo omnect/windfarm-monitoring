@@ -7,7 +7,7 @@ license = "MIT OR Apache-2.0"
 name = "windfarm-monitoring"
 readme = "README.md"
 repository = "git@github.com:omnect/windfarm-monitoring.git"
-version = "0.4.5"
+version = "0.4.6"
 
 [profile.dist]
 inherits = "release"
